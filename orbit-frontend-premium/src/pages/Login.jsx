@@ -1,13 +1,17 @@
 import { useState, useContext } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useContext(AuthContext);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Get the intended destination from location state or default to dashboard
+  const from = location.state?.from?.pathname || "/dashboard";
 
   // ✅ Real Backend Login Function
   const handleLogin = async (e) => {
@@ -28,17 +32,22 @@ export default function Login() {
       const data = await res.json();
 
       if (res.ok) {
+        console.log("Login response:", data);
         alert("Login Successful ✅");
 
         // ✅ Save Token in LocalStorage
         localStorage.setItem("token", data.token);
+        console.log("Token saved:", data.token);
 
         // ✅ Save User in Context
         login(data.user);
+        console.log("User logged in:", data.user);
 
         // ✅ Redirect Dashboard
-        navigate("/dashboard");
+        console.log("Redirecting to:", from);
+        navigate(from, { replace: true });
       } else {
+        console.log("Login failed:", data);
         alert(data.message || "Invalid Credentials ❌");
       }
     } catch (error) {

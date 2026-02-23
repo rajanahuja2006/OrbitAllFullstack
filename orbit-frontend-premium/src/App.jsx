@@ -6,11 +6,10 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import ResumeAnalyzer from "./pages/ResumeAnalyzer";
 import Roadmap from "./pages/Roadmap";
-import Jobs from "./pages/Jobs";
 import ChatTutor from "./pages/ChatTutor";
-
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Jobs from "./pages/Jobs";
 
 export default function App() {
   return (
@@ -31,8 +30,18 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
           <Route path="/roadmap" element={<Roadmap />} />
-          <Route path="/jobs" element={<Jobs />} />
           <Route path="/chat-tutor" element={<ChatTutor />} />
+        </Route>
+
+        {/* Jobs Route - Separate Protected Route */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/jobs" element={<Jobs />} />
         </Route>
 
         {/* Default Redirect */}

@@ -13,8 +13,10 @@ export default function AuthProvider({ children }) {
   }, []);
 
   const login = (userData) => {
+    console.log("AuthContext login called with:", userData);
     setUser(userData);
     localStorage.setItem("orbitUser", JSON.stringify(userData));
+    console.log("User saved to context and localStorage");
   };
 
   const logout = () => {

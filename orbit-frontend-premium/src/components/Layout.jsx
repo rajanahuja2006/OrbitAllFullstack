@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useContext } from "react";
 
 import {
@@ -18,10 +18,10 @@ export default function Layout() {
 
   const menu = [
     { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard /> },
-    { name: "Resume Analyzer", path: "/resume", icon: <FileText /> },
+    { name: "Resume Analyzer", path: "/resume-analyzer", icon: <FileText /> },
     { name: "Roadmap", path: "/roadmap", icon: <Map /> },
     { name: "Job Match", path: "/jobs", icon: <Briefcase /> },
-    { name: "AI Tutor", path: "/chat", icon: <MessageCircle /> },
+    { name: "AI Tutor", path: "/chat-tutor", icon: <MessageCircle /> },
   ];
 
   // ✅ Handle Logout
@@ -38,9 +38,11 @@ export default function Layout() {
 
         {/* TOP */}
         <div>
-          <h1 className="text-2xl font-extrabold text-purple-400 mb-10">
-            Orbit AI 🚀
-          </h1>
+          <Link to="/dashboard" className="inline-block">
+            <h1 className="text-2xl font-extrabold text-purple-400 mb-10">
+              Orbit AI 🚀
+            </h1>
+          </Link>
 
           <nav className="flex flex-col gap-3">
             {menu.map((item) => (
