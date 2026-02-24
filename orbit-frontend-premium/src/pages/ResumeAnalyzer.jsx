@@ -5,6 +5,7 @@ import CrazyBackground from "../components/CrazyBackground";
 import AnimatedParticles from "../components/AnimatedParticles";
 
 export default function ResumeAnalyzer() {
+  // Premium UI/UX redesign with drag-and-drop and animations
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [analysis, setAnalysis] = useState(null);
