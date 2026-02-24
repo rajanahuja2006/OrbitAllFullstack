@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { getApiBase } from "../utils/api";
+import CrazyBackground from "../components/CrazyBackground";
+import AnimatedParticles from "../components/AnimatedParticles";
 
 export default function ChatTutor() {
   const [messages, setMessages] = useState([
     {
       id: "welcome",
       role: "assistant",
-      content:
-        "Ask me anything about your roadmap, ATS score, or job matches. Try: 'What should I learn next?' or 'Which jobs should I apply for first?'",
+      content: "🤖 Hey there! I'm your AI career coach. I can help with your roadmap, ATS score, job matches, and more. What would you like to know?",
       ts: Date.now(),
     },
   ]);
@@ -17,6 +19,13 @@ export default function ChatTutor() {
   const endRef = useRef(null);
 
   const apiBase = useMemo(() => getApiBase(), []);
+  
+  const suggestedQuestions = [
+    "What should I learn next?",
+    "Which jobs should I apply for?",
+    "How can I improve my ATS?",
+    "Create a 7-day learning plan",
+  ];
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -71,66 +80,98 @@ export default function ChatTutor() {
     }
   };
 
+  const handleSuggestedQuestion = (question) => {
+    setInput(question);
+  };
+
   return (
-    <div>
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-bold text-purple-400">AI Tutor Chat</h1>
-          <p className="text-gray-400 mt-2">
-            Resume-aware coaching. Deterministic answers. Zero fluff.
+    <div className="min-h-screen bg-black text-white overflow-hidden relative">
+      <CrazyBackground />
+      <AnimatedParticles count={30} />
+      <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 h-screen flex flex-col">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-5xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-3">
+            AI Career Tutor 💬
+          </h1>
+          <p className="text-lg text-gray-300">
+            Get personalized guidance from your AI career coach
           </p>
-        </div>
-        <div className="hidden md:flex gap-2">
-          {["What should I learn next?", "Which jobs should I apply for first?", "How can I improve my ATS?"]
-            .map((q) => (
-              <button
-                key={q}
-                onClick={() => setInput(q)}
-                className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-200 hover:bg-white/10 transition text-sm"
+        </motion.div>
+
+        {/* Chat Container */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex-1 rounded-3xl bg-gradient-to-b from-gray-900/50 to-black/50 border border-purple-500/30 backdrop-blur-xl overflow-hidden flex flex-col"
+        >
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-8 space-y-6">
+            <AnimatePresence>
+              {messages.map((m, idx) => (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 20, x: m.role === "user" ? 30 : -30 }}
+                  animate={{ opacity: 1, y: 0, x: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[75%] rounded-3xl px-6 py-4 ${
+                      m.role === "user"
+                        ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/50"
+                        : "bg-gradient-to-br from-gray-800/80 to-gray-900/80 border border-purple-500/30 text-gray-100"
+                    }`}
+                  >
+                    <div className="whitespace-pre-wrap leading-relaxed text-sm md:text-base">
+                      {m.content}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* Loading State */}
+            {loading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex justify-start"
               >
-                {q}
-              </button>
-            ))}
-        </div>
-      </div>
+                <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 border border-purple-500/30 text-gray-100 rounded-3xl px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="text-2xl"
+                    >
+                      🤔
+                    </motion.div>
+                    <p className="font-semibold">Thinking...</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
-      <div className="mt-8 bg-white/5 border border-white/10 rounded-2xl p-6 h-[560px] flex flex-col backdrop-blur-xl">
-        <div className="flex-1 overflow-y-auto pr-2 space-y-4">
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className={`w-full flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={
-                  m.role === "user"
-                    ? "max-w-[85%] md:max-w-[70%] bg-purple-600 text-white rounded-2xl px-4 py-3 shadow"
-                    : "max-w-[85%] md:max-w-[70%] bg-black/40 border border-white/10 text-gray-100 rounded-2xl px-4 py-3"
-                }
+            {/* Error State */}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full"
               >
-                <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
-              </div>
-            </div>
-          ))}
+                <div className="p-4 rounded-2xl bg-red-500/20 border border-red-500/50 text-red-200">
+                  <p className="font-semibold text-sm">⚠️ {error}</p>
+                </div>
+              </motion.div>
+            )}
 
-          {loading && (
-            <div className="w-full flex justify-start">
-              <div className="max-w-[85%] md:max-w-[70%] bg-black/40 border border-white/10 text-gray-200 rounded-2xl px-4 py-3">
-                Thinking...
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="w-full">
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm">
-                {error}
-              </div>
-            </div>
-          )}
-
-          <div ref={endRef} />
-        </div>
+            <div ref={endRef} />
+          </div>
 
         <div className="mt-4">
           <div className="flex gap-2 items-end">

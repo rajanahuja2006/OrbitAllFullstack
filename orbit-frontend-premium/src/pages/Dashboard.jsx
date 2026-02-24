@@ -1,8 +1,8 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import API_CONFIG from "../utils/api";
+import { API_CONFIG } from "../utils/api";
 import CrazyBackground from "../components/CrazyBackground";
 import AnimatedParticles from "../components/AnimatedParticles";
 import MorphingCard from "../components/MorphingCard";
@@ -11,8 +11,11 @@ import InteractiveButton from "../components/InteractiveButton";
 export default function Dashboard() {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
   const [resumeData, setResumeData] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadMessage, setUploadMessage] = useState("");
   const [hoveredCard, setHoveredCard] = useState(null);
 
   useEffect(() => {
@@ -39,28 +42,37 @@ export default function Dashboard() {
     }
   };
 
+  const handleUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
+    const file = event.target.files?.[0];
     
-    // Validation
     if (!file) {
-      alert("Please select a file to upload");
+      setUploadMessage("");
       return;
     }
 
-    // Check file type
+    // Validation
     if (!file.type.includes("pdf") && !file.name.endsWith(".pdf")) {
-      alert("Please upload a PDF file only");
+      setUploadMessage("❌ Please upload a PDF file only");
+      setTimeout(() => setUploadMessage(""), 5000);
       return;
     }
 
-    // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert("File size must be less than 10MB");
+      setUploadMessage("❌ File size must be less than 10MB");
+      setTimeout(() => setUploadMessage(""), 5000);
       return;
     }
 
     setUploading(true);
+    setUploadProgress(10);
+    setUploadMessage("📤 Uploading your resume...");
+    
     const formData = new FormData();
     formData.append("resume", file);
 
@@ -68,12 +80,14 @@ export default function Dashboard() {
       const token = localStorage.getItem("token");
       
       if (!token) {
-        alert("You are not logged in. Please login first.");
+        setUploadMessage("❌ Please login again");
+        setTimeout(() => setUploadMessage(""), 5000);
         setUploading(false);
         return;
       }
 
-      console.log("Uploading file:", file.name);
+      setUploadProgress(30);
+      console.log("Uploading resume:", file.name);
       
       const response = await fetch(API_CONFIG.RESUME_UPLOAD, {
         method: "POST",
@@ -83,22 +97,33 @@ export default function Dashboard() {
         body: formData,
       });
 
+      setUploadProgress(70);
       const data = await response.json();
       
       if (response.ok) {
+        setUploadProgress(100);
         setResumeData(data);
-        alert(`✅ Resume uploaded successfully!\n\nATS Score: ${data.atsScore}%\nSkills Found: ${data.skills.length}\nJobs Matched: ${data.jobsMatched}`);
+        setUploadMessage(`✅ Resume analyzed! ATS: ${data.atsScore}% | Skills: ${data.skills?.length || 0}`);
+        
+        setTimeout(() => {
+          setUploadMessage("");
+          setUploadProgress(0);
+        }, 3000);
+        
         // Reset file input
         event.target.value = "";
       } else {
         console.error("Upload failed:", data);
-        alert(`❌ Upload failed: ${data.message || "Unknown error"}`);
+        setUploadMessage(`❌ ${data.message || "Upload failed"}`);
+        setTimeout(() => setUploadMessage(""), 5000);
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert(`❌ Error: ${error.message || "Failed to upload resume"}`);
+      setUploadMessage(`❌ ${error.message || "Connection error"}`);
+      setTimeout(() => setUploadMessage(""), 5000);
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -187,6 +212,15 @@ export default function Dashboard() {
           </p>
         </motion.div>
 
+        {/* Hidden File Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+
         {/* Stats Cards */}
         <motion.div
           variants={containerVariants}
@@ -197,25 +231,155 @@ export default function Dashboard() {
           <MorphingCard
             icon="📊"
             title="ATS Score"
-            value={resumeData ? `${resumeData.atsScore}%` : "0%"}
+            value={resumeData?.atsScore ? `${resumeData.atsScore}%` : "0%"}
             gradient={["#667eea", "#764ba2", "#f093fb", "#4facfe"]}
             delay={0}
           />
           <MorphingCard
             icon="🎯"
             title="Roadmap Progress"
-            value={resumeData ? `${resumeData.roadmapProgress || 0}%` : "0%"}
+            value={resumeData?.roadmapProgress ? `${resumeData.roadmapProgress}%` : "0%"}
             gradient={["#f093fb", "#f5576c", "#4facfe", "#00f2fe"]}
             delay={0.1}
           />
           <MorphingCard
             icon="💼"
             title="Jobs Matched"
-            value={resumeData ? resumeData.jobsMatched || 0 : 0}
+            value={resumeData?.jobsMatched || 0}
             gradient={["#4facfe", "#00f2fe", "#667eea", "#764ba2"]}
             delay={0.2}
           />
         </motion.div>
+
+        {/* Upload Section */}
+        {!resumeData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glow-card p-12 rounded-3xl mb-16 backdrop-blur-xl"
+          >
+            <div className="text-center">
+              <motion.div
+                animate={uploading ? { scale: 1.1 } : { scale: 1 }}
+                className="text-6xl mb-6"
+              >
+                📄
+              </motion.div>
+              <h2 className="text-4xl font-bold neon-text mb-4">
+                Upload Your Resume
+              </h2>
+              <p className="text-gray-300 mb-8 text-lg">
+                Let our AI analyze your resume and provide personalized career insights
+              </p>
+
+              {/* Upload Button */}
+              <button
+                onClick={handleUploadClick}
+                disabled={uploading}
+                className={`
+                  relative inline-block px-10 py-4 rounded-2xl font-bold text-lg
+                  transition-all duration-300 transform
+                  ${uploading ? "opacity-50 cursor-not-allowed" : "hover:scale-105 cursor-pointer"}
+                  bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600
+                  hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500
+                  text-white shadow-lg hover:shadow-2xl
+                  border border-cyan-400 hover:border-cyan-300
+                `}
+              >
+                <motion.span
+                  animate={uploading ? { opacity: [1, 0.5, 1] } : {}}
+                  transition={{ duration: 1.5, repeat: uploading ? Infinity : 0 }}
+                >
+                  {uploading ? `⏳ Uploading... ${uploadProgress}%` : "📤 Upload PDF Resume"}
+                </motion.span>
+              </button>
+
+              {/* Progress Bar */}
+              {uploading && uploadProgress > 0 && (
+                <motion.div className="mt-6">
+                  <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${uploadProgress}%` }}
+                      className="h-full bg-gradient-to-r from-cyan-500 to-blue-500"
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Upload Message */}
+              {uploadMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 p-4 rounded-xl bg-opacity-20 bg-blue-500"
+                >
+                  <p className="text-white font-semibold">{uploadMessage}</p>
+                </motion.div>
+              )}
+
+              {/* File Type Info */}
+              <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-opacity-10 bg-cyan-500">
+                  <p className="text-sm text-cyan-300">📋 PDF Format</p>
+                  <p className="text-xs text-gray-400">Works best with PDF</p>
+                </div>
+                <div className="p-4 rounded-lg bg-opacity-10 bg-blue-500">
+                  <p className="text-sm text-blue-300">📊 Max 10MB</p>
+                  <p className="text-xs text-gray-400">Keep file size optimal</p>
+                </div>
+                <div className="p-4 rounded-lg bg-opacity-10 bg-purple-500">
+                  <p className="text-sm text-purple-300">⚡ AI Analysis</p>
+                  <p className="text-xs text-gray-400">Instant skill detection</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* After Upload - Analysis Section */}
+        {resumeData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="glow-card p-10 rounded-3xl mb-16"
+          >
+            <h2 className="text-3xl font-bold neon-text mb-6">✨ Resume Analysis Complete</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="p-6 rounded-xl bg-opacity-10 bg-green-500">
+                <p className="text-green-300 text-sm font-semibold">TOP SKILLS DETECTED</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {resumeData.skills?.slice(0, 5).map((skill, idx) => (
+                    <span key={idx} className="px-3 py-1 rounded-full bg-green-500 bg-opacity-20 text-green-300 text-sm">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="p-6 rounded-xl bg-opacity-10 bg-blue-500">
+                <p className="text-blue-300 text-sm font-semibold">KEY RECOMMENDATIONS</p>
+                <ul className="mt-4 space-y-2">
+                  {resumeData.suggestions?.slice(0, 3).map((suggestion, idx) => (
+                    <li key={idx} className="text-sm text-gray-300 flex items-start">
+                      <span className="text-blue-400 mr-2">→</span>
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate("/resume-analyzer")}
+              className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-cyan-500 hover:from-green-400 hover:to-cyan-400 text-white font-bold transition-all"
+            >
+              📈 View Detailed Analysis
+            </button>
+          </motion.div>
+        )}
 
         {/* Next Steps Section */}
         <motion.div
@@ -224,89 +388,45 @@ export default function Dashboard() {
           whileInView="visible"
           className="glow-card p-10 rounded-3xl mb-16"
         >
-          <h2 className="text-3xl font-bold neon-text mb-4">
-            🚀 Next Recommended Step
-          </h2>
-          <p className="text-gray-300 mb-8 text-lg">
-            {resumeData
-              ? "Your resume has been analyzed. Explore detailed insights and get personalized guidance."
-              : "Upload your resume to unlock personalized AI guidance and career insights."}
-          </p>
-
-          {!resumeData && (
-            <div className="mt-8">
-              <input
-                type="file"
-                id="dashboard-resume-upload"
-                accept=".pdf,.doc,.docx"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-
-              <label htmlFor="dashboard-resume-upload" className="cursor-pointer">
-                <InteractiveButton
-                  icon="📤"
-                  variant="primary"
-                  as="span"
-                  disabled={uploading}
-                >
-                  {uploading ? "Uploading..." : "Upload Resume"}
-                </InteractiveButton>
-              </label>
-            </div>
-          )}
-
-          {resumeData && (
-            <motion.div whileHover={{ scale: 1.05 }}>
-              <InteractiveButton
-                icon="📈"
-                variant="secondary"
-                onClick={() => navigate("/resume-analyzer")}
-              >
-                View Analysis
-              </InteractiveButton>
-            </motion.div>
-          )}
-        </motion.div>
-
-        {/* Quick Actions */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          className="grid grid-cols-2 md:grid-cols-4 gap-4"
-        >
-          <QuickActionCard
-            icon="🛣️"
-            title="Roadmap"
-            onClick={() => navigate("/roadmap")}
-            delay={0}
-          />
-          <QuickActionCard
-            icon="💬"
-            title="Chat Tutor"
-            onClick={() => navigate("/chat-tutor")}
-            delay={0.1}
-          />
-          <QuickActionCard
-            icon="💼"
-            title="Job Matches"
-            onClick={() => navigate("/jobs")}
-            delay={0.2}
-          />
-          <QuickActionCard
-            icon="✨"
-            title="Resume Tips"
-            onClick={() => navigate("/resume-analyzer")}
-            delay={0.3}
-          />
+          <h2 className="text-3xl font-bold neon-text mb-8">🚀 Explore Your Career Path</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <QuickActionCard
+              icon="🛣️"
+              title="Roadmap"
+              subtitle="Build your growth path"
+              onClick={() => navigate("/roadmap")}
+              delay={0}
+            />
+            <QuickActionCard
+              icon="💬"
+              title="Chat Tutor"
+              subtitle="AI career guidance"
+              onClick={() => navigate("/chat-tutor")}
+              delay={0.1}
+            />
+            <QuickActionCard
+              icon="💼"
+              title="Job Matches"
+              subtitle="Find perfect roles"
+              onClick={() => navigate("/jobs")}
+              delay={0.2}
+            />
+            <QuickActionCard
+              icon="📊"
+              title="Resume Tips"
+              subtitle="Optimize your resume"
+              onClick={() => navigate("/resume-analyzer")}
+              delay={0.3}
+            />
+          </div>
         </motion.div>
       </div>
     </div>
   );
 }
 
-function QuickActionCard({ icon, title, onClick, delay }) {
+function QuickActionCard({ icon, title, subtitle, onClick, delay }) {
   return (
     <motion.button
       variants={{
@@ -317,17 +437,31 @@ function QuickActionCard({ icon, title, onClick, delay }) {
           transition: { delay, duration: 0.5, type: "spring" },
         },
       }}
-      whileHover={{ scale: 1.1, y: -5 }}
-      whileTap={{ scale: 0.9 }}
+      initial="hidden"
+      whileInView="visible"
+      whileHover={{ scale: 1.08, y: -8 }}
+      whileTap={{ scale: 0.92 }}
       onClick={onClick}
-      className="relative p-6 rounded-2xl glow-card group"
+      className="relative p-8 rounded-2xl glow-card group overflow-hidden"
     >
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-green-500 via-cyan-500 to-green-500 opacity-0 group-hover:opacity-20 transition-opacity" />
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 opacity-0 group-hover:opacity-30 transition-all duration-300" />
+      <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-cyan-400 transition-all duration-300" />
+      
       <div className="relative text-center">
-        <div className="text-4xl mb-2">{icon}</div>
-        <p className="text-sm font-bold text-gray-300 group-hover:text-cyan-300 transition-colors">
+        <motion.div 
+          className="text-5xl mb-3 block"
+          whileHover={{ scale: 1.2, rotate: 5 }}
+        >
+          {icon}
+        </motion.div>
+        <p className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors">
           {title}
         </p>
+        {subtitle && (
+          <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors mt-2">
+            {subtitle}
+          </p>
+        )}
       </div>
     </motion.button>
   );
