@@ -12,14 +12,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Increase JSON payload limit for larger requests
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
 // Health check endpoint for Railway
 app.get("/health", (req, res) => {
-  res.status(200).json({ status: "healthy", message: "Server is running" });
+  res.status(200).json({ status: "healthy", message: "Server is running", timestamp: new Date() });
 });
 
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/resume", resumeRoutes);
+
+// Add logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
 
 app.get("/", (req, res) => {
   res.status(200).send("Orbit Backend Running 🚀");
@@ -27,7 +37,8 @@ app.get("/", (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ message: "Endpoint not found", path: req.path });
+  console.warn(`[404] ${req.method} ${req.path}`);
+  res.status(404).json({ message: "Endpoint not found", path: req.path, method: req.method });
 });
 
 // Error handling middleware

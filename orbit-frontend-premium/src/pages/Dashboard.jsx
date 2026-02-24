@@ -41,7 +41,24 @@ export default function Dashboard() {
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    if (!file) return;
+    
+    // Validation
+    if (!file) {
+      alert("Please select a file to upload");
+      return;
+    }
+
+    // Check file type
+    if (!file.type.includes("pdf") && !file.name.endsWith(".pdf")) {
+      alert("Please upload a PDF file only");
+      return;
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File size must be less than 10MB");
+      return;
+    }
 
     setUploading(true);
     const formData = new FormData();
@@ -49,6 +66,15 @@ export default function Dashboard() {
 
     try {
       const token = localStorage.getItem("token");
+      
+      if (!token) {
+        alert("You are not logged in. Please login first.");
+        setUploading(false);
+        return;
+      }
+
+      console.log("Uploading file:", file.name);
+      
       const response = await fetch(API_CONFIG.RESUME_UPLOAD, {
         method: "POST",
         headers: {
@@ -61,13 +87,16 @@ export default function Dashboard() {
       
       if (response.ok) {
         setResumeData(data);
-        alert("Resume uploaded and analyzed successfully!");
+        alert(`✅ Resume uploaded successfully!\n\nATS Score: ${data.atsScore}%\nSkills Found: ${data.skills.length}\nJobs Matched: ${data.jobsMatched}`);
+        // Reset file input
+        event.target.value = "";
       } else {
-        alert(data.message || "Upload failed");
+        console.error("Upload failed:", data);
+        alert(`❌ Upload failed: ${data.message || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Error uploading resume");
+      alert(`❌ Error: ${error.message || "Failed to upload resume"}`);
     } finally {
       setUploading(false);
     }

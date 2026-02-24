@@ -3,11 +3,29 @@ import Resume from "../models/Resume.js";
 
 export const uploadResume = async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+    console.log("📧 Upload request received");
+    console.log("🔑 User ID:", req.user?.id);
+    console.log("📁 File:", req.file ? { name: req.file.originalname, size: req.file.size } : "No file");
+    console.log("Headers:", req.headers);
+
+    if (!req.user) {
+      console.error("❌ No user authenticated");
+      return res.status(401).json({ message: "User not authenticated. Please login again." });
     }
 
+    if (!req.file) {
+      console.error("❌ No file provided");
+      return res.status(400).json({ message: "No file uploaded. Please select a PDF resume." });
+    }
+
+    if (!req.file.buffer) {
+      console.error("❌ File buffer missing");
+      return res.status(400).json({ message: "File upload failed. Please try again." });
+    }
+
+    console.log("📄 Processing PDF...");
     const data = await pdf(req.file.buffer);
+    console.log("✅ PDF processed successfully");
     const text = data.text;
 
     // Expanded skill keywords for better detection
@@ -132,13 +150,15 @@ export const uploadResume = async (req, res) => {
 
     const uniqueSkills = [...new Set(extractedSkills)];
 
-    await Resume.create({
+    console.log("💾 Saving resume to database...");
+    const savedResume = await Resume.create({
       user: req.user.id,
       extractedSkills: uniqueSkills,
       readinessScore: atsScore,
       roadmapProgress: Math.round(roadmapProgress),
       jobsMatched,
     });
+    console.log("✅ Resume saved successfully:", savedResume._id);
 
     res.status(200).json({
       message: "Resume processed successfully",
@@ -150,8 +170,15 @@ export const uploadResume = async (req, res) => {
       jobsMatched,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Resume processing failed" });
+    console.error("❌ Resume upload error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({
+      message: "Resume processing failed: " + error.message,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
