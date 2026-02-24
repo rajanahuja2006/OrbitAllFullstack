@@ -19,7 +19,13 @@ app.get("/", (req, res) => {
   res.send("Orbit Backend Running 🚀");
 });
 
-const PORT = process.env.PORT || 5002;
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error("Error:", err);
+  res.status(500).json({ message: "Internal server error", error: err.message });
+});
+
+const PORT = parseInt(process.env.PORT) || 3000;
 
 // Start server after database connection
 (async () => {
@@ -27,6 +33,7 @@ const PORT = process.env.PORT || 5002;
     await connectDB();
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`✅ Server running on port ${PORT}`);
+      console.log("🎉 All systems ready!");
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error.message);
