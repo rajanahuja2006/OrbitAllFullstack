@@ -12,11 +12,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint for Railway
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "healthy", message: "Server is running" });
+});
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/resume", resumeRoutes);
+
 app.get("/", (req, res) => {
-  res.send("Orbit Backend Running 🚀");
+  res.status(200).send("Orbit Backend Running 🚀");
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ message: "Endpoint not found", path: req.path });
 });
 
 // Error handling middleware
@@ -31,9 +42,18 @@ const PORT = parseInt(process.env.PORT) || 3000;
 (async () => {
   try {
     await connectDB();
-    app.listen(PORT, "0.0.0.0", () => {
+    const server = app.listen(PORT, "0.0.0.0", () => {
       console.log(`✅ Server running on port ${PORT}`);
       console.log("🎉 All systems ready!");
+    });
+
+    // Handle graceful shutdown
+    process.on("SIGTERM", () => {
+      console.log("SIGTERM received, shutting down gracefully...");
+      server.close(() => {
+        console.log("Server closed");
+        process.exit(0);
+      });
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error.message);
