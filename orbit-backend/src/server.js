@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import resumeRoutes from "./routes/resumeRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -24,6 +25,7 @@ app.get("/health", (req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/resume", resumeRoutes);
+app.use("/api/payment", paymentRoutes);
 
 // Add logging middleware for debugging
 app.use((req, res, next) => {

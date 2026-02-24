@@ -1,14 +1,28 @@
 import pdf from "pdf-parse";
 import Resume from "../models/Resume.js";
+import { canUploadResume, decrementUploadCount } from "./paymentController.js";
 
 export const uploadResume = async (req, res) => {
   try {
     console.log("📧 Upload request received");
     console.log("🔑 User ID:", req.user?.id);
     console.log("📁 File:", req.file ? { name: req.file.originalname, size: req.file.size } : "No file");
-    console.log("Headers:", req.headers);
+    
+    // Check if user has active subscription and remaining uploads
+    const uploadCheck = await canUploadResume(req.user.id);
+    if (!uploadCheck.allowed) {
+      console.log("❌ Upload denied:", uploadCheck.reason);
+      return res.status(403).json({ 
+        message: uploadCheck.reason,
+        requiresPayment: true,
+        currentPlan: uploadCheck.currentPlan,
+        uploadsRemaining: uploadCheck.uploadsRemaining,
+      });
+    }
 
-    if (!req.user) {
+    console.log("✅ Upload allowed for plan:", uploadCheck.plan);
+
+```    if (!req.user) {
       console.error("❌ No user authenticated");
       return res.status(401).json({ message: "User not authenticated. Please login again." });
     }
@@ -159,6 +173,9 @@ export const uploadResume = async (req, res) => {
       jobsMatched,
     });
     console.log("✅ Resume saved successfully:", savedResume._id);
+
+    // Decrement upload count for paid users
+    await decrementUploadCount(req.user.id);
 
     res.status(200).json({
       message: "Resume processed successfully",

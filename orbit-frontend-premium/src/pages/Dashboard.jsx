@@ -2,7 +2,7 @@ import { useState, useEffect, useContext, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import { API_CONFIG } from "../utils/api";
+import { API_CONFIG, getApiBase } from "../utils/api";
 import CrazyBackground from "../components/CrazyBackground";
 import AnimatedParticles from "../components/AnimatedParticles";
 import MorphingCard from "../components/MorphingCard";
@@ -17,10 +17,31 @@ export default function Dashboard() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadMessage, setUploadMessage] = useState("");
   const [hoveredCard, setHoveredCard] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
 
   useEffect(() => {
     fetchResumeData();
+    fetchSubscription();
   }, []);
+
+  const fetchSubscription = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${getApiBase()}/api/payment/subscription`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSubscription(data);
+      }
+    } catch (error) {
+      console.error("Error fetching subscription:", error);
+    }
+  };
 
   const fetchResumeData = async () => {
     try {
