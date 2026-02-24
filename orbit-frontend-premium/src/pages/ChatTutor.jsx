@@ -43,7 +43,10 @@ export default function ChatTutor() {
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${apiBase}/api/resume/tutor`, {
+      const url = `${apiBase}/api/resume/tutor`;
+      console.log("🔗 Sending tutor request to:", url);
+      
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -52,8 +55,11 @@ export default function ChatTutor() {
         body: JSON.stringify({ message: text }),
       });
 
+      console.log("📡 Response status:", res.status, "IsOk:", res.ok);
+      
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        console.error("❌ Error response:", body);
         throw new Error(body?.message || "Tutor request failed");
       }
 

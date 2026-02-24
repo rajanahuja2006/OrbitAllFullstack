@@ -37,6 +37,10 @@ router.post("/upload", protect, upload.single("resume"), handleMulterError, uplo
 router.get("/my-resumes", protect, getMyResumes);
 router.get("/roadmap", protect, generateRoadmap);
 router.get("/jobs", protect, getJobMatches);
+router.get("/test", (req, res) => {
+  console.log("✅ Resume routes test endpoint hit");
+  res.json({ message: "Resume routes are working!", timestamp: new Date() });
+});
 router.post("/tutor", protect, tutorChat);
 
 export default router;

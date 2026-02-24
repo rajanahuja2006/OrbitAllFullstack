@@ -527,6 +527,10 @@ export const getJobMatches = async (req, res) => {
 
 export const tutorChat = async (req, res) => {
   try {
+    console.log("🤖 tutorChat function called");
+    console.log("📋 Request body:", { message: req.body.message });
+    console.log("👤 User ID:", req.user?.id);
+    
     const { message } = req.body || {};
     const question = typeof message === "string" ? message.trim() : "";
     if (!question) {
