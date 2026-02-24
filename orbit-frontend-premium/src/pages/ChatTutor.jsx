@@ -9,7 +9,7 @@ export default function ChatTutor() {
     {
       id: "welcome",
       role: "assistant",
-      content: "🤖 Hey there! I'm your AI career coach. I can help with your roadmap, ATS score, job matches, and more. What would you like to know?",
+      content: "🤖 Hey there! I'm your AI career coach. What would you like to know?",
       ts: Date.now(),
     },
   ]);
@@ -19,12 +19,11 @@ export default function ChatTutor() {
   const endRef = useRef(null);
 
   const apiBase = useMemo(() => getApiBase(), []);
-  
+
   const suggestedQuestions = [
     "What should I learn next?",
     "Which jobs should I apply for?",
     "How can I improve my ATS?",
-    "Create a 7-day learning plan",
   ];
 
   useEffect(() => {
@@ -62,7 +61,7 @@ export default function ChatTutor() {
       const assistantMsg = {
         id: `a-${Date.now()}`,
         role: "assistant",
-        content: data?.answer || "I couldn’t generate an answer. Try again.",
+        content: data?.answer || "I couldn't generate an answer. Try again.",
         ts: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -80,14 +79,11 @@ export default function ChatTutor() {
     }
   };
 
-  const handleSuggestedQuestion = (question) => {
-    setInput(question);
-  };
-
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden relative">
       <CrazyBackground />
       <AnimatedParticles count={30} />
+
       <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 h-screen flex flex-col">
         {/* Header */}
         <motion.div
@@ -117,7 +113,7 @@ export default function ChatTutor() {
                   key={m.id}
                   initial={{ opacity: 0, y: 20, x: m.role === "user" ? 30 : -30 }}
                   animate={{ opacity: 1, y: 0, x: 0 }}
-                  transition={{ delay: idx * 0.1 }}
+                  transition={{ delay: idx * 0.05 }}
                   className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
@@ -127,7 +123,7 @@ export default function ChatTutor() {
                         : "bg-gradient-to-br from-gray-800/80 to-gray-900/80 border border-purple-500/30 text-gray-100"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap leading-relaxed text-sm md:text-base">
+                    <div className="whitespace-pre-wrap leading-relaxed">
                       {m.content}
                     </div>
                   </div>
@@ -135,7 +131,6 @@ export default function ChatTutor() {
               ))}
             </AnimatePresence>
 
-            {/* Loading State */}
             {loading && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -147,7 +142,6 @@ export default function ChatTutor() {
                     <motion.div
                       animate={{ scale: [1, 1.2, 1] }}
                       transition={{ duration: 1, repeat: Infinity }}
-                      className="text-2xl"
                     >
                       🤔
                     </motion.div>
@@ -157,7 +151,6 @@ export default function ChatTutor() {
               </motion.div>
             )}
 
-            {/* Error State */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -173,33 +166,66 @@ export default function ChatTutor() {
             <div ref={endRef} />
           </div>
 
-        <div className="mt-4">
-          <div className="flex gap-2 items-end">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              rows={2}
-              className="flex-1 p-3 rounded-xl bg-black border border-white/10 text-white resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="Type your question... (Enter to send, Shift+Enter for new line)"
-            />
-            <button
-              onClick={sendMessage}
-              disabled={loading || !input.trim()}
-              className={`px-6 py-3 rounded-xl font-semibold transition ${
-                loading || !input.trim()
-                  ? "bg-purple-500/40 text-white/70 cursor-not-allowed"
-                  : "bg-purple-500 hover:bg-purple-600 text-white"
-              }`}
+          {/* Suggested Questions */}
+          {messages.length <= 1 && !loading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="px-8 py-6 border-t border-purple-500/20"
             >
-              Send
-            </button>
-          </div>
+              <p className="text-sm text-gray-400 font-semibold mb-4">💡 Try asking:</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {suggestedQuestions.map((q) => (
+                  <motion.button
+                    key={q}
+                    whileHover={{ scale: 1.05, x: 5 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setInput(q)}
+                    className="text-left px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-200 text-sm hover:border-purple-400 transition-all"
+                  >
+                    {q}
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
-          <div className="mt-2 text-xs text-gray-500">
-            Tip: Ask for a “7-day plan” and include your daily study time.
+          {/* Input Area */}
+          <div className="border-t border-purple-500/20 p-8 bg-gradient-to-t from-black/50 to-transparent">
+            <div className="space-y-4">
+              <div className="flex gap-4 items-end">
+                <div className="flex-1">
+                  <textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={onKeyDown}
+                    rows={2}
+                    maxLength={500}
+                    className="w-full p-4 rounded-2xl bg-gradient-to-b from-gray-800 to-gray-900 border border-purple-500/30 hover:border-purple-400 focus:border-purple-400 text-white resize-none focus:outline-none transition-all placeholder-gray-500"
+                    placeholder="Ask me anything... (Enter to send)"
+                  />
+                  <p className="text-xs text-gray-500 mt-2 text-right">{input.length}/500</p>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={sendMessage}
+                  disabled={loading || !input.trim()}
+                  className={`px-6 py-4 rounded-2xl font-bold transition-all ${
+                    loading || !input.trim()
+                      ? "bg-purple-500/40 text-white/50 cursor-not-allowed"
+                      : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-500/50"
+                  }`}
+                >
+                  {loading ? "⏳" : "✈️"}
+                </motion.button>
+              </div>
+
+              <div className="text-xs text-gray-500">💡 Tip: Be specific for better answers!</div>
+            </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
