@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import API_CONFIG from "../utils/api";
 
 export default function Roadmap() {
   const [roadmapData, setRoadmapData] = useState(null);
@@ -12,7 +13,7 @@ export default function Roadmap() {
   const fetchRoadmap = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5001/api/resume/roadmap", {
+      const response = await fetch(API_CONFIG.RESUME_ROADMAP, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

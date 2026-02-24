@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import API_CONFIG from "../utils/api";
 
 export default function Dashboard() {
   const { user } = useContext(AuthContext);
@@ -16,7 +17,7 @@ export default function Dashboard() {
   const fetchResumeData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5001/api/resume/my-resumes", {
+      const response = await fetch(API_CONFIG.RESUME_MY_RESUMES, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -43,7 +44,7 @@ export default function Dashboard() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5001/api/resume/upload", {
+      const response = await fetch(API_CONFIG.RESUME_UPLOAD, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

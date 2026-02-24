@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import API_CONFIG from "../utils/api";
 
 export default function Jobs() {
   const [jobData, setJobData] = useState(null);
@@ -13,7 +14,7 @@ export default function Jobs() {
   const fetchJobs = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5001/api/resume/jobs", {
+      const response = await fetch(API_CONFIG.RESUME_JOBS, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

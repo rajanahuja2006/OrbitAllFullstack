@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import API_CONFIG from "../utils/api";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export default function Signup() {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://localhost:5001/api/auth/signup", {
+      const res = await fetch(API_CONFIG.AUTH_SIGNUP, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

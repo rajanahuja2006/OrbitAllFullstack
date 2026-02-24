@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { getApiBase } from "../utils/api";
 
 export default function ChatTutor() {
   const [messages, setMessages] = useState([
@@ -6,7 +7,7 @@ export default function ChatTutor() {
       id: "welcome",
       role: "assistant",
       content:
-        "Ask me anything about your roadmap, ATS score, or job matches. Try: ‘What should I learn next?’ or ‘Which jobs should I apply for first?’",
+        "Ask me anything about your roadmap, ATS score, or job matches. Try: 'What should I learn next?' or 'Which jobs should I apply for first?'",
       ts: Date.now(),
     },
   ]);
@@ -15,7 +16,7 @@ export default function ChatTutor() {
   const [error, setError] = useState(null);
   const endRef = useRef(null);
 
-  const apiBase = useMemo(() => "http://localhost:5001", []);
+  const apiBase = useMemo(() => getApiBase(), []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });

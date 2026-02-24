@@ -1,4 +1,5 @@
 import { useState } from "react";
+import API_CONFIG from "../utils/api";
 
 export default function ResumeAnalyzer() {
   const [file, setFile] = useState(null);
@@ -24,7 +25,7 @@ export default function ResumeAnalyzer() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5001/api/resume/upload", {
+      const response = await fetch(API_CONFIG.RESUME_UPLOAD, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
