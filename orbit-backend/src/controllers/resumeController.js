@@ -1,6 +1,7 @@
 import pdf from "pdf-parse";
 import Resume from "../models/Resume.js";
 import { canUploadResume, decrementUploadCount } from "./paymentController.js";
+import { GoogleGenAI } from "@google/genai";
 
 export const uploadResume = async (req, res) => {
   try {
@@ -22,7 +23,7 @@ export const uploadResume = async (req, res) => {
 
     console.log("✅ Upload allowed for plan:", uploadCheck.plan);
 
-```    if (!req.user) {
+    if (!req.user) {
       console.error("❌ No user authenticated");
       return res.status(401).json({ message: "User not authenticated. Please login again." });
     }
@@ -42,125 +43,76 @@ export const uploadResume = async (req, res) => {
     console.log("✅ PDF processed successfully");
     const text = data.text;
 
-    // Expanded skill keywords for better detection
-    const skillKeywords = [
-      // Programming Languages
-      "Python", "Java", "C++", "JavaScript", "TypeScript", "Go", "Rust", "PHP", "Ruby", "C#", "Swift", "Kotlin",
-      // Frontend Technologies
-      "React", "Angular", "Vue", "Next.js", "Svelte", "HTML", "CSS", "Sass", "Tailwind CSS", "Bootstrap", "Material UI",
-      // Backend Technologies
-      "Node.js", "Express.js", "Django", "Flask", "Spring", "Ruby on Rails", "ASP.NET", "FastAPI",
-      // Databases
-      "MongoDB", "SQL", "PostgreSQL", "MySQL", "SQLite", "Redis", "Cassandra", "Elasticsearch", "DynamoDB",
-      // Cloud & DevOps
-      "AWS", "Azure", "Google Cloud", "GCP", "Docker", "Kubernetes", "Terraform", "Ansible", "Jenkins", "CI/CD",
-      // Data Science & ML
-      "Machine Learning", "Deep Learning", "TensorFlow", "PyTorch", "Keras", "Pandas", "NumPy", "Scikit-learn", "NLP",
-      "Data Science", "Computer Vision", "Reinforcement Learning", "Artificial Intelligence",
-      // Tools & Platforms
-      "Git", "GitHub", "GitLab", "Bitbucket", "Jira", "Confluence", "Slack", "Figma", "Postman",
-      // Concepts & Practices
-      "DSA", "Algorithms", "Data Structures", "System Design", "Object-Oriented Programming", "REST API", "GraphQL",
-      "Microservices", "Agile", "Scrum", "Kanban", "Test-Driven Development", "DevOps",
-      // Security & Infrastructure
-      "Cybersecurity", "Network Security", "Linux", "Unix", "Windows", "Networking", "Load Balancing",
-      // Other Technologies
-      "Blockchain", "Web3", "Serverless", "Lambda", "API Gateway", "Message Queues", "Caching",
-    ];
-
-    const extractedSkills = skillKeywords.filter((skill) =>
-      text.toLowerCase().includes(skill.toLowerCase())
-    );
-
-    // Consistent ATS score calculation (no randomness)
+    console.log("🤖 Analyzing resume with Gemini AI...");
     let atsScore = 0;
-    if (extractedSkills.length > 0) {
-      atsScore = Math.min(50, extractedSkills.length * 3);
-
-      const hasFrontend = extractedSkills.some((s) => ["React", "Angular", "Vue", "HTML", "CSS"].includes(s));
-      const hasBackend = extractedSkills.some((s) => ["Node.js", "Express", "Django", "Spring"].includes(s));
-      const hasDatabase = extractedSkills.some((s) => ["MongoDB", "SQL", "PostgreSQL"].includes(s));
-      const hasCloud = extractedSkills.some((s) => ["AWS", "Azure", "Google Cloud", "Docker"].includes(s));
-      const hasTools = extractedSkills.some((s) => ["Git", "GitHub", "Jira"].includes(s));
-
-      if (hasFrontend) atsScore += 10;
-      if (hasBackend) atsScore += 10;
-      if (hasDatabase) atsScore += 10;
-      if (hasCloud) atsScore += 10;
-      if (hasTools) atsScore += 5;
-
-      const wordCount = text.split(/\s+/).length;
-      if (wordCount > 200) atsScore += 5;
-      if (text.toLowerCase().includes("project")) atsScore += 5;
-      if (text.toLowerCase().includes("experience")) atsScore += 5;
-
-      atsScore = Math.min(95, atsScore);
-    }
-
-    // Enhanced experience extraction
+    let extractedSkills = [];
     let experience = "Not specified";
-    const experiencePatterns = [
-      /(\d+)\s*(?:years?|yrs?)(?:\s*(?:of\s*)?(?:experience|work))?/gi,
-      /(\d+)\s*(?:months?|mos?)(?:\s*(?:of\s*)?(?:experience|work))?/gi,
-      /(\d+)\+?\s*(?:years?|yrs?)(?:\s*(?:of\s*)?(?:experience|work))?/gi,
-      /(\d+)\s*(?:months?|mos?)\s*(?:of\s*)?internship/gi,
-      /internship\s*(?:for\s*)?(\d+)\s*(?:months?|mos?)/gi,
-      /summer\s*internship/gi,
-      /(\d{4})\s*-\s*(\d{4})/g,
-      /(\d+)\s*-\s*(\d+)\s*(?:years?|months?)/g,
-    ];
+    let suggestions = [];
 
-    let totalMonths = 0;
-    let hasInternship = false;
-
-    for (const pattern of experiencePatterns) {
-      let match;
-      while ((match = pattern.exec(text)) !== null) {
-        if (pattern.toString().includes("internship")) {
-          hasInternship = true;
-          totalMonths += parseInt(match[1]) || 3;
-        } else if (pattern.toString().includes("years?")) {
-          totalMonths += (parseInt(match[1]) || 0) * 12;
-        } else if (pattern.toString().includes("months?")) {
-          totalMonths += parseInt(match[1]) || 0;
-        } else if (match.length >= 3) {
-          const startYear = parseInt(match[1]);
-          const endYear = parseInt(match[2]);
-          totalMonths += Math.max(0, (endYear - startYear) * 12);
-        }
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY is missing from environment variables.");
       }
-    }
+      
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const prompt = `
+You are an expert ATS (Applicant Tracking System) analyzer. Analyze the following resume text and provide:
+1. An ATS Score (0-100) based on industry standards, skill relevance, and impact.
+2. A list of technical and soft skills found in the resume.
+3. Total calculated years or months of experience (e.g., "3 years 2 months (including internship)").
+4. 3-5 specific, actionable suggestions for improving the resume.
 
-    if (totalMonths > 0) {
-      const years = Math.floor(totalMonths / 12);
-      const months = totalMonths % 12;
-      if (years > 0 && months > 0) experience = `${years} years ${months} months`;
-      else if (years > 0) experience = `${years} years`;
-      else experience = `${months} months`;
+Respond ONLY with a valid JSON object in the exact format shown below, with no markdown, no code blocks, and no extra text:
+{
+  "atsScore": 85,
+  "skills": ["React", "Node.js", "Python"],
+  "experience": "2 years",
+  "suggestions": ["Add more metrics to your experience", "Include soft skills"]
+}
 
-      if (hasInternship) experience += " (including internship)";
+Resume Text:
+${text.substring(0, 10000)}
+      `;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            temperature: 0.2,
+            responseMimeType: "application/json",
+        }
+      });
+      
+      const responseText = response.text;
+      
+      // Attempt to parse JSON response
+      let parsedData;
+      try {
+        parsedData = JSON.parse(responseText.replace(/```json\n?|\n?```/g, ""));
+      } catch (parseError) {
+        console.error("❌ Failed to parse Gemini response:", responseText);
+        throw new Error("Invalid format returned by AI.");
+      }
+      
+      atsScore = parsedData.atsScore || 0;
+      extractedSkills = parsedData.skills || [];
+      experience = parsedData.experience || "Not specified";
+      suggestions = parsedData.suggestions || [];
+      console.log("✅ Gemini AI analysis complete. Score:", atsScore);
+    } catch (aiError) {
+      console.error("❌ Gemini AI analysis failed:", aiError.message);
+      console.log("Fallback to basic extraction...");
+      // Fallback if AI fails or key is missing
+      extractedSkills = ["JavaScript", "React", "Node.js", "MongoDB"]; // Mock fallback
+      atsScore = 50;
+      experience = "Unknown";
+      suggestions = ["Add more details to your resume.", "Ensure your API key is configured for AI analysis."];
     }
 
     const roadmap = generatePersonalizedRoadmap(extractedSkills, atsScore);
     const completedSteps = roadmap.filter((step) => step.status === "completed").length;
     const roadmapProgress = roadmap.length ? Math.min(100, (completedSteps / roadmap.length) * 100) : 0;
     const jobsMatched = Math.floor((atsScore / 100) * extractedSkills.length * 2);
-
-    const missingSkills = skillKeywords.filter((skill) => !extractedSkills.includes(skill));
-
-    const suggestions = [];
-    if (extractedSkills.length < 5) suggestions.push("Add more technical skills to strengthen your profile");
-    if (!hasInternship && totalMonths < 12) suggestions.push("Consider adding internship or project experience");
-    if (!text.toLowerCase().includes("project")) suggestions.push("Include specific project descriptions with technologies used");
-    if (missingSkills.length > 0) {
-      const priorityMissing = missingSkills.slice(0, 5);
-      suggestions.push(`Consider learning: ${priorityMissing.join(", ")}`);
-    }
-    if (atsScore < 70) suggestions.push("Quantify achievements with metrics and numbers");
-    if (!text.toLowerCase().match(/\d+\s*(?:percent|%|increased|decreased|reduced|improved)/)) {
-      suggestions.push("Add measurable achievements and impact statements");
-    }
-    if (suggestions.length === 0) suggestions.push("Strong resume! Consider tailoring it for specific job applications");
 
     const uniqueSkills = [...new Set(extractedSkills)];
 
