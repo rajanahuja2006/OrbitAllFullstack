@@ -9,23 +9,41 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy");
 const PLANS = {
   basic: {
     name: "Basic",
-    price: 199, // $1.99 in cents
+    price: 16900, // ₹169 in paise
     resumeUploads: 5,
-    features: ["5 Resume Uploads", "Basic ATS Analysis", "Email Support"],
+    features: [
+      "5 Resume Uploads",
+      "Basic ATS Analysis",
+      "Email Support"
+    ],
     period: "monthly",
   },
   premium: {
     name: "Premium",
-    price: 599, // $5.99 in cents
+    price: 49900, // ₹499 in paise
     resumeUploads: 50,
-    features: ["50 Resume Uploads", "Advanced ATS Analysis", "AI Tutor Access", "Priority Support"],
+    features: [
+      "50 Resume Uploads",
+      "Advanced ATS Analysis",
+      "AI Tutor Access",
+      "Priority Support"
+    ],
     period: "monthly",
   },
   pro: {
     name: "Pro",
-    price: 1299, // $12.99 in cents
+    price: 109900, // ₹1099 in paise
     resumeUploads: -1, // Unlimited
-    features: ["Unlimited Uploads", "Expert Analysis", "Full AI Suite", "24/7 Priority Support", "API Access"],
+    features: [
+      "Unlimited Resume Uploads",
+      "Expert Resume Review",
+      "Full AI Suite Access",
+      "24/7 Priority Support",
+      "API Access",
+      "Custom Roadmaps",
+      "Interview Prep",
+      "Monthly Strategy Call"
+    ],
     period: "monthly",
   },
 };
@@ -54,7 +72,7 @@ export const createCheckoutSession = async (req, res) => {
       line_items: [
         {
           price_data: {
-            currency: "usd",
+            currency: "inr",
             product_data: {
               name: `Orbit AI - ${planData.name} Plan`,
               description: planData.features.join(", "),
@@ -108,7 +126,7 @@ export const handlePaymentSuccess = async (req, res) => {
       email: user.email,
       stripeSessionId: sessionId,
       amount: planData.price,
-      currency: "usd",
+      currency: "inr",
       status: "completed",
       plan: plan,
       description: `${planData.name} Plan - ${planData.resumeUploads} uploads`,

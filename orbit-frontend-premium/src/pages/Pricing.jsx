@@ -7,40 +7,43 @@ import SoftBackground from "../components/SoftBackground";
 const PLANS = [
   {
     name: "Basic",
-    price: "$1.99",
-    priceValue: 199,
+    price: "₹169",
+    priceValue: 16900,
     period: "month",
     resumeUploads: "5",
     features: [
       "5 Resume Uploads",
       "Basic ATS Analysis",
       "Email Support",
-      "Download Reports"
     ],
-    popular: false,
+    highlight: false,
+    gradient: "from-blue-500/20 to-cyan-500/20",
+    border: "border-blue-500/20",
+    button: "bg-white/10 text-white hover:bg-white/20",
     id: "basic"
   },
   {
     name: "Premium",
-    price: "$5.99",
-    priceValue: 599,
+    price: "₹499",
+    priceValue: 49900,
     period: "month",
     resumeUploads: "50",
     features: [
       "50 Resume Uploads",
       "Advanced ATS Analysis",
-      "AI Career Tutor Access",
-      "Priority Email Support",
-      "Job Matching",
-      "Skill Recommendations"
+      "AI Tutor Access",
+      "Priority Support",
     ],
-    popular: true,
+    highlight: true,
+    gradient: "from-purple-500/20 to-pink-500/20",
+    border: "border-purple-500/50",
+    button: "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25",
     id: "premium"
   },
   {
     name: "Pro",
-    price: "$12.99",
-    priceValue: 1299,
+    price: "₹1,099",
+    priceValue: 109900,
     period: "month",
     resumeUploads: "Unlimited",
     features: [
