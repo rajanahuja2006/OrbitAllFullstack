@@ -240,6 +240,49 @@ export default function ResumeAnalyzer() {
                           ? "⚠️ Average. Consider the suggestions below."
                           : "❌ Needs significant improvement. Follow the suggestions."}
                       </p>
+
+                      {/* ATS Breakdown Bars */}
+                      {analysis.atsBreakdown && (
+                        <div className="mt-8 space-y-4 pt-6 border-t border-purple-500/20">
+                          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Score Breakdown</p>
+                          
+                          <div className="flex items-center gap-4">
+                            <span className="w-24 text-sm text-gray-300">💥 Impact</span>
+                            <div className="flex-1 h-2 rounded-full bg-gray-800 overflow-hidden">
+                              <motion.div
+                                animate={{ width: `${analysis.atsBreakdown.impact || 0}%` }}
+                                transition={{ duration: 1, delay: 0.2 }}
+                                className="h-full bg-gradient-to-r from-red-500 to-orange-500"
+                              />
+                            </div>
+                            <span className="w-8 text-right text-xs font-bold text-orange-400">{analysis.atsBreakdown.impact}%</span>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <span className="w-24 text-sm text-gray-300">🔑 Keywords</span>
+                            <div className="flex-1 h-2 rounded-full bg-gray-800 overflow-hidden">
+                              <motion.div
+                                animate={{ width: `${analysis.atsBreakdown.keywords || 0}%` }}
+                                transition={{ duration: 1, delay: 0.4 }}
+                                className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                              />
+                            </div>
+                            <span className="w-8 text-right text-xs font-bold text-cyan-400">{analysis.atsBreakdown.keywords}%</span>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <span className="w-24 text-sm text-gray-300">📐 Formatting</span>
+                            <div className="flex-1 h-2 rounded-full bg-gray-800 overflow-hidden">
+                              <motion.div
+                                animate={{ width: `${analysis.atsBreakdown.formatting || 0}%` }}
+                                transition={{ duration: 1, delay: 0.6 }}
+                                className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                              />
+                            </div>
+                            <span className="w-8 text-right text-xs font-bold text-pink-400">{analysis.atsBreakdown.formatting}%</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
 

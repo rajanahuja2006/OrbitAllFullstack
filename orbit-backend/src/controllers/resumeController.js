@@ -59,17 +59,23 @@ export const uploadResume = async (req, res) => {
       const prompt = `
 You are a highly analytical Senior Technical Recruiter and ATS Expert. Deeply analyze the following resume text to provide extremely detailed, actionable feedback.
 
-Extract exactly 4 fields into a JSON object:
-1. "atsScore" (Number): Calculate a rigorous ATS score (0-100). Deduct points for lack of quantifiable metrics (e.g., "increased revenue by 20%"), missing standard technical keywords, poor structuring, or vague bullet points. Most average resumes score between 40-60. Only score above 80 if the resume is truly exceptional.
-2. "skills" (Array of Strings): Extract a highly exhaustive, comprehensive list of ALL technical skills, languages, frameworks, developer tools, soft skills, and cloud platforms mentioned.
-3. "experience" (String): Calculate the total years of professional experience accurately (e.g., "3 years 2 months").
-4. "suggestions" (Array of Strings): Provide 4-6 highly specific, actionable suggestions to improve the resume. DO NOT give generic advice like "Add more metrics." INSTEAD, give precise examples: "Rewrite the bullet point about 'managing databases' to include the database size, request volume, or query optimization metrics." Suggest extremely targeted technical keywords they might be missing based on their role.
+Extract exactly 5 fields into a JSON object:
+1. "atsScore" (Number): Calculate a rigorous overall ATS score (0-100). 
+2. "atsBreakdown" (Object): Provide three integer scores (0-100) detailing the components. Include exactly: { "impact": 60, "keywords": 80, "formatting": 70 }.
+3. "skills" (Array of Strings): Extract a highly exhaustive, comprehensive list of ALL technical skills, languages, frameworks, developer tools, soft skills, and cloud platforms mentioned.
+4. "experience" (String): Calculate the total years of professional experience accurately (e.g., "3 years 2 months").
+5. "suggestions" (Array of Strings): Provide 4-6 highly specific, actionable suggestions to improve the resume. DO NOT give generic advice like "Add more metrics." INSTEAD, give precise examples: "Rewrite the bullet point about 'managing databases' to include the database size, request volume, or query optimization metrics." Suggest extremely targeted technical keywords they might be missing based on their role.
 
 Respond ONLY with a valid JSON object starting with '{' and ending with '}'. Do not use markdown wrappers, code blocks, or explanations.
 
 Example Output:
 {
   "atsScore": 52,
+  "atsBreakdown": {
+    "impact": 40,
+    "keywords": 65,
+    "formatting": 50
+  },
   "skills": ["React", "TypeScript", "Node.js", "AWS EC2", "Leadership", "Agile", "PostgreSQL"],
   "experience": "2 years 6 months",
   "suggestions": [
