@@ -182,14 +182,7 @@ export default function Dashboard() {
       <SoftBackground />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
-        <header className="mb-14">
-          <h1 className="text-4xl font-bold tracking-tight text-white">
-            Welcome back, <span className="brand-gradient">{user?.name || "Navigator"}</span>
-          </h1>
-          <p className="mt-2 text-lg text-white/70">
-            Your AI-powered career companion is ready to guide you forward.
-          </p>
-        </header>
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
