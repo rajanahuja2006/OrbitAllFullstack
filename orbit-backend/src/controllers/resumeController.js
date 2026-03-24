@@ -2,6 +2,7 @@ import pdf from "pdf-parse";
 import Resume from "../models/Resume.js";
 import { canUploadResume, decrementUploadCount } from "./paymentController.js";
 import { GoogleGenAI } from "@google/genai";
+import User from "../models/User.js";
 
 export const uploadResume = async (req, res) => {
   try {
@@ -201,11 +202,16 @@ export const generateRoadmap = async (req, res) => {
 
     const skills = latestResume.extractedSkills;
     const atsScore = latestResume.readinessScore;
-    const roadmap = generatePersonalizedRoadmap(skills, atsScore);
+    
+    const user = await User.findById(req.user.id);
+    const completedCourses = user?.completedCourses || [];
+    const combinedSkills = [...new Set([...skills, ...completedCourses])];
+
+    const roadmap = generatePersonalizedRoadmap(combinedSkills, atsScore);
 
     res.json({
       roadmap,
-      currentSkills: skills,
+      currentSkills: combinedSkills,
       atsScore,
       totalSteps: roadmap.length,
       completedSteps: roadmap.filter((s) => s.status === "completed").length,
@@ -585,7 +591,12 @@ export const getJobMatches = async (req, res) => {
 
     const skills = latestResume.extractedSkills;
     const atsScore = latestResume.readinessScore;
-    const jobAnalysis = generateJobMatches(skills, atsScore);
+
+    const user = await User.findById(req.user.id);
+    const completedCourses = user?.completedCourses || [];
+    const combinedSkills = [...new Set([...skills, ...completedCourses])];
+
+    const jobAnalysis = generateJobMatches(combinedSkills, atsScore);
 
     res.json({
       message: "Job matches generated successfully",
@@ -621,8 +632,13 @@ export const tutorChat = async (req, res) => {
 
     const skills = Array.isArray(latestResume.extractedSkills) ? latestResume.extractedSkills : [];
     const atsScore = latestResume.readinessScore || 0;
-    const roadmap = generatePersonalizedRoadmap(skills, atsScore);
-    const jobAnalysis = generateJobMatches(skills, atsScore);
+    
+    const user = await User.findById(req.user.id);
+    const completedCourses = user?.completedCourses || [];
+    const combinedSkills = [...new Set([...skills, ...completedCourses])];
+
+    const roadmap = generatePersonalizedRoadmap(combinedSkills, atsScore);
+    const jobAnalysis = generateJobMatches(combinedSkills, atsScore);
 
     const completed = roadmap.filter((s) => s.status === "completed");
     const current = roadmap.filter((s) => s.status === "current");
@@ -680,5 +696,25 @@ Respond directly to the user's latest question. If they ask for recommendations,
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Tutor chat failed" });
+  }
+};
+
+export const addCompletedCourse = async (req, res) => {
+  try {
+    const { course } = req.body;
+    if (!course) return res.status(400).json({ message: "Course name is required" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.completedCourses.includes(course)) {
+      user.completedCourses.push(course);
+      await user.save();
+    }
+
+    res.json({ message: "Course added successfully", completedCourses: user.completedCourses });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to add course" });
   }
 };

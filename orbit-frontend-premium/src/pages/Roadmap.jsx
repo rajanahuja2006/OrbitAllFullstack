@@ -71,10 +71,36 @@ export default function Roadmap() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hoveredStep, setHoveredStep] = useState(null);
+  const [newCourse, setNewCourse] = useState("");
+  const [addingCourse, setAddingCourse] = useState(false);
 
   useEffect(() => {
     fetchRoadmap();
   }, []);
+
+  const handleAddCourse = async () => {
+    if (!newCourse.trim()) return;
+    setAddingCourse(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_CONFIG.BASE_URL}/resume/add-course`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ course: newCourse.trim() })
+      });
+      if (res.ok) {
+        setNewCourse("");
+        fetchRoadmap();
+      }
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setAddingCourse(false);
+    }
+  };
 
   const fetchRoadmap = async () => {
     try {
@@ -184,12 +210,35 @@ export default function Roadmap() {
           animate={{ opacity: 1, y: 0 }}
           className="glass p-10 rounded-3xl mb-16"
         >
-          <h1 className="text-4xl font-bold text-white mb-4">
-            Your AI-Powered Roadmap <span className="text-brand-200">🛣️</span>
-          </h1>
-          <p className="text-lg text-white/70 mb-8">
-            A personalized learning path designed just for you.
-          </p>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">
+                Your AI-Powered Roadmap <span className="text-brand-200">🛣️</span>
+              </h1>
+              <p className="text-lg text-white/70">
+                A personalized learning path designed just for you.
+              </p>
+            </div>
+            
+            {/* Manual Course Input */}
+            <div className="flex items-center gap-2 bg-gray-900/50 p-2 rounded-2xl border border-white/10">
+              <input 
+                type="text" 
+                value={newCourse}
+                onChange={(e) => setNewCourse(e.target.value)}
+                placeholder="e.g. React, AWS Certificate..." 
+                className="bg-transparent border-none outline-none text-white px-4 py-2 w-48 placeholder-gray-500"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCourse()}
+              />
+              <button 
+                onClick={handleAddCourse}
+                disabled={addingCourse || !newCourse.trim()}
+                className="bg-cyan-500 hover:bg-cyan-400 text-white p-2 px-4 rounded-xl font-bold transition-all disabled:opacity-50"
+              >
+                {addingCourse ? "..." : "Add Past Course"}
+              </button>
+            </div>
+          </div>
 
           {roadmapData && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

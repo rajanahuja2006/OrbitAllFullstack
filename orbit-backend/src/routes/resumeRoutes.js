@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { uploadResume, getMyResumes, generateRoadmap, getJobMatches, tutorChat } from "../controllers/resumeController.js";
+import { uploadResume, getMyResumes, generateRoadmap, getJobMatches, tutorChat, addCompletedCourse } from "../controllers/resumeController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -42,5 +42,6 @@ router.get("/test", (req, res) => {
   res.json({ message: "Resume routes are working!", timestamp: new Date() });
 });
 router.post("/tutor", protect, tutorChat);
+router.post("/add-course", protect, addCompletedCourse);
 
 export default router;
