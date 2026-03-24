@@ -4,6 +4,67 @@ import { useNavigate } from "react-router-dom";
 import { API_CONFIG } from "../utils/api";
 import SoftBackground from "../components/SoftBackground";
 
+const RESOURCE_LINKS = {
+  "Codecademy": "https://www.codecademy.com/",
+  "FreeCodeCamp": "https://www.freecodecamp.org/",
+  "CS50": "https://cs50.harvard.edu/x/",
+  "The Odin Project": "https://www.theodinproject.com/",
+  "LeetCode": "https://leetcode.com/",
+  "HackerRank": "https://www.hackerrank.com/",
+  "GeeksforGeeks": "https://www.geeksforgeeks.org/",
+  "AlgoExpert": "https://www.algoexpert.io/",
+  "MDN Web Docs": "https://developer.mozilla.org/",
+  "CSS Tricks": "https://css-tricks.com/",
+  "JavaScript.info": "https://javascript.info/",
+  "Frontend Masters": "https://frontendmasters.com/",
+  "React Documentation": "https://react.dev/",
+  "Vue Mastery": "https://www.vuemastery.com/",
+  "Angular University": "https://angular-university.io/",
+  "Next.js Docs": "https://nextjs.org/docs",
+  "Node.js Docs": "https://nodejs.org/en/docs",
+  "Express.js Guide": "https://expressjs.com/",
+  "MongoDB University": "https://learn.mongodb.com/",
+  "API Design": "https://swagger.io/resources/articles/best-practices-in-api-design/",
+  "SQLBolt": "https://sqlbolt.com/",
+  "MongoDB Docs": "https://www.mongodb.com/docs/",
+  "PostgreSQL Tutorial": "https://www.postgresqltutorial.com/",
+  "Database Design": "https://www.geeksforgeeks.org/database-design/",
+  "AWS Free Tier": "https://aws.amazon.com/free/",
+  "Docker Hub": "https://hub.docker.com/",
+  "Kubernetes Docs": "https://kubernetes.io/docs/",
+  "DevOps Roadmap": "https://roadmap.sh/devops",
+  "Git Tutorial": "https://git-scm.com/docs/gittutorial",
+  "GitHub Skills": "https://skills.github.com/",
+  "Atlassian Git": "https://www.atlassian.com/git",
+  "Git Flow": "https://nvie.com/posts/a-successful-git-branching-model/",
+  "Coursera ML": "https://www.coursera.org/learn/machine-learning",
+  "Fast.ai": "https://www.fast.ai/",
+  "TensorFlow Tutorials": "https://www.tensorflow.org/tutorials",
+  "PyTorch Docs": "https://pytorch.org/docs/",
+  "System Design Primer": "https://github.com/donnemartin/system-design-primer",
+  "Designing Data-Intensive Apps": "https://dataintensive.net/",
+  "Grokking System Design": "https://www.educative.io/courses/grokking-the-system-design-interview",
+  "Alex Xu Blog": "https://blog.bytebytego.com/",
+  "Full Stack Open": "https://fullstackopen.com/",
+  "MERN Stack Tutorial": "https://www.mongodb.com/mern-stack",
+  "Deployment Guides": "https://render.com/docs",
+  "Cloud Architecture": "https://aws.amazon.com/architecture/",
+  "Interview Cake": "https://www.interviewcake.com/",
+  "Pramp": "https://www.pramp.com/",
+  "LeetCode Interview Prep": "https://leetcode.com/explore/interview/",
+  "Glassdoor Interview Questions": "https://www.glassdoor.com/Interview/index.htm",
+  "AWS Solutions Architect": "https://aws.amazon.com/certification/certified-solutions-architect-associate/",
+  "Azure Developer": "https://learn.microsoft.com/en-us/credentials/certifications/azure-developer/",
+  "Google Cloud Professional": "https://cloud.google.com/learn/certification/cloud-architect",
+  "ML Specialization": "https://www.coursera.org/specializations/machine-learning-introduction",
+  "Deep Learning Course": "https://www.coursera.org/specializations/deep-learning",
+  "AI Engineer Path": "https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-engineer/",
+  "React Advanced Patterns": "https://frontendmasters.com/courses/advanced-react-patterns/",
+  "UI/UX Design": "https://www.coursera.org/specializations/ui-ux-design",
+  "Backend Architecture": "https://www.coursera.org/learn/backend-architecture",
+  "Microservices Course": "https://www.udemy.com/topic/microservices/"
+};
+
 export default function Roadmap() {
   const navigate = useNavigate();
   const [roadmapData, setRoadmapData] = useState(null);
@@ -264,15 +325,21 @@ export default function Roadmap() {
                       <div className="pt-6 border-t border-white/10">
                         <p className="text-gray-400 text-sm font-semibold mb-3">📚 Recommended Resources</p>
                         <div className="flex flex-wrap gap-2">
-                          {step.resources.map((resource, ridx) => (
-                            <motion.span
-                              key={ridx}
-                              whileHover={{ scale: 1.05 }}
-                              className="px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-purple-500/30 to-blue-500/30 border border-purple-500/50 text-purple-300 hover:border-purple-400 transition-all cursor-pointer"
-                            >
-                              {resource}
-                            </motion.span>
-                          ))}
+                          {step.resources.map((resource, ridx) => {
+                            const linkUrl = RESOURCE_LINKS[resource] || `https://www.google.com/search?q=${encodeURIComponent(resource + " tutorial")}`;
+                            return (
+                              <motion.a
+                                key={ridx}
+                                href={linkUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                whileHover={{ scale: 1.05 }}
+                                className="px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-purple-500/30 to-blue-500/30 border border-purple-500/50 text-purple-300 hover:border-purple-400 hover:text-white hover:bg-purple-600/40 transition-all cursor-pointer inline-flex items-center gap-1"
+                              >
+                                {resource} <span className="text-xs">↗</span>
+                              </motion.a>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
