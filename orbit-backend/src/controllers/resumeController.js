@@ -500,7 +500,7 @@ export const tutorChat = async (req, res) => {
     console.log("📋 Request body:", { message: req.body.message });
     console.log("👤 User ID:", req.user?.id);
     
-    const { message } = req.body || {};
+    const { message, history } = req.body || {};
     const question = typeof message === "string" ? message.trim() : "";
     if (!question) {
       return res.status(400).json({ message: "Message is required" });
@@ -516,7 +516,6 @@ export const tutorChat = async (req, res) => {
     const roadmap = generatePersonalizedRoadmap(skills, atsScore);
     const jobAnalysis = generateJobMatches(skills, atsScore);
 
-    const q = question.toLowerCase();
     const completed = roadmap.filter((s) => s.status === "completed");
     const current = roadmap.filter((s) => s.status === "current");
     const locked = roadmap.filter((s) => s.status === "locked");
@@ -525,30 +524,48 @@ export const tutorChat = async (req, res) => {
     const missingSkills = Array.isArray(jobAnalysis?.missingSkills) ? jobAnalysis.missingSkills : [];
 
     let answer = "";
-    if (q.includes("roadmap") || q.includes("next") || q.includes("learn")) {
-      const next = current.slice(0, 2);
-      answer = [
-        `Roadmap status: ${completed.length} completed, ${current.length} in progress, ${locked.length} locked.`,
-        next.length ? `Next focus:\n${next.map((x, i) => `${i + 1}. ${x.title} (${x.estimatedTime})`).join("\n")}` : "Next focus: Keep going—your roadmap is already optimized.",
-      ].join("\n\n");
-    } else if (q.includes("job") || q.includes("apply")) {
-      const topJobs = jobs
-        .slice()
-        .sort((a, b) => (b.skillMatchPercentage || 0) - (a.skillMatchPercentage || 0))
-        .slice(0, 3);
-      answer = [
-        `Based on your resume (ATS ${atsScore}%) I found ${jobs.length} matching roles.`,
-        topJobs.length
-          ? topJobs.map((j, idx) => `${idx + 1}. ${j.title} at ${j.company} (${j.skillMatchPercentage}% match)\n   Apply: ${j.applyLink}`).join("\n")
-          : "No strong matches yet—add more projects/skills and re-upload.",
-        missingSkills.length ? `Skill gaps to focus: ${missingSkills.slice(0, 8).join(", ")}.` : "Your coverage is strong—tailor your resume to each job description.",
-      ].join("\n\n");
-    } else {
-      answer = [
-        `Your ATS score is ${atsScore}%.`,
-        `Detected skills: ${skills.slice(0, 12).join(", ") || "(none detected)"}`,
-        "Ask: 'What should I learn next?' or 'Which jobs should I apply for first?'",
-      ].join("\n\n");
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY missing");
+      }
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const historyText = Array.isArray(history) && history.length > 0 
+        ? history.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n") 
+        : "No previous chat history.";
+
+      const prompt = `
+You are an expert, highly encouraging, and actionable AI career coach for Orbit.
+You are helping a candidate navigate their career, roadmap, and jobs. 
+Be concise, clear, and very practical. DO NOT use technical Markdown syntax (like **bolding**, # headers, or *italics*). Avoid literal asterisks completely as the frontend cannot render them. Instead, use emojis, UPPERCASE for emphasis, empty lines, and simple bullet points (-) to format your response nicely.
+
+--- USER CONTEXT ---
+- Resume ATS Score: ${atsScore}%
+- Detected Skills: ${skills.join(", ") || "None"}
+- Roadmap Status: ${completed.length} completed, ${current.length} in progress, ${locked.length} locked steps.
+- Current Learning Focus: ${current.map(s => s.title).join(", ") || "None"}
+- Top Job Matches: ${jobs.slice(0, 3).map(j => `${j.title} at ${j.company} (${j.skillMatchPercentage}% match)`).join(" | ") || "None"}
+- Suggested Skills to learn for jobs: ${missingSkills.slice(0, 5).join(", ") || "None"}
+
+--- CHAT HISTORY ---
+${historyText}
+
+--- CURRENT QUESTION ---
+USER: "${question}"
+
+Respond directly to the user's latest question. If they ask for recommendations, use the context above to suggest top matches or learning topics.
+`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          temperature: 0.7,
+        }
+      });
+      answer = response.text;
+    } catch (aiError) {
+      console.error("AI Tutor fallback:", aiError.message);
+      answer = "I'm sorry, my AI brain is currently resting. However, based on your profile, your ATS score is " + atsScore + "%. I'd recommend focusing on your next roadmap steps: " + (current.map(s => s.title).join(", ") || "building more projects.");
     }
 
     res.json({ answer });

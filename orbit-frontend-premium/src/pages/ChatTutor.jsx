@@ -45,13 +45,16 @@ export default function ChatTutor() {
       const url = `${apiBase}/api/resume/tutor`;
       console.log("🔗 Sending tutor request to:", url);
       
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const payload = { message: text, history };
+      
       const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify(payload),
       });
 
       console.log("📡 Response status:", res.status, "IsOk:", res.ok);
