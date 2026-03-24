@@ -56,22 +56,30 @@ export const uploadResume = async (req, res) => {
       
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const prompt = `
-You are an expert ATS (Applicant Tracking System) analyzer. Analyze the following resume text and provide:
-1. An ATS Score (0-100) based on industry standards, skill relevance, and impact.
-2. A list of technical and soft skills found in the resume.
-3. Total calculated years or months of experience (e.g., "3 years 2 months (including internship)").
-4. 3-5 specific, actionable suggestions for improving the resume.
+You are a highly analytical Senior Technical Recruiter and ATS Expert. Deeply analyze the following resume text to provide extremely detailed, actionable feedback.
 
-Respond ONLY with a valid JSON object in the exact format shown below, with no markdown, no code blocks, and no extra text:
+Extract exactly 4 fields into a JSON object:
+1. "atsScore" (Number): Calculate a rigorous ATS score (0-100). Deduct points for lack of quantifiable metrics (e.g., "increased revenue by 20%"), missing standard technical keywords, poor structuring, or vague bullet points. Most average resumes score between 40-60. Only score above 80 if the resume is truly exceptional.
+2. "skills" (Array of Strings): Extract a highly exhaustive, comprehensive list of ALL technical skills, languages, frameworks, developer tools, soft skills, and cloud platforms mentioned.
+3. "experience" (String): Calculate the total years of professional experience accurately (e.g., "3 years 2 months").
+4. "suggestions" (Array of Strings): Provide 4-6 highly specific, actionable suggestions to improve the resume. DO NOT give generic advice like "Add more metrics." INSTEAD, give precise examples: "Rewrite the bullet point about 'managing databases' to include the database size, request volume, or query optimization metrics." Suggest extremely targeted technical keywords they might be missing based on their role.
+
+Respond ONLY with a valid JSON object starting with '{' and ending with '}'. Do not use markdown wrappers, code blocks, or explanations.
+
+Example Output:
 {
-  "atsScore": 85,
-  "skills": ["React", "Node.js", "Python"],
-  "experience": "2 years",
-  "suggestions": ["Add more metrics to your experience", "Include soft skills"]
+  "atsScore": 52,
+  "skills": ["React", "TypeScript", "Node.js", "AWS EC2", "Leadership", "Agile", "PostgreSQL"],
+  "experience": "2 years 6 months",
+  "suggestions": [
+    "Quantify your impact in the backend role: mention the scale of API requests handled (e.g., 'Handles 10k requests/min')",
+    "The resume lacks testing frameworks (e.g., Jest, Cypress); add them if you have experience.",
+    "Change the vague summary to a targeted professional summary highlighting your top 3 tech stacks."
+  ]
 }
 
 Resume Text:
-${text.substring(0, 10000)}
+${text.substring(0, 15000)}
       `;
 
       const response = await ai.models.generateContent({
