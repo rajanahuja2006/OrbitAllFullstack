@@ -424,24 +424,54 @@ export default function Jobs() {
                     )}
 
                     {/* CTA Buttons */}
-                    <div className="flex gap-4">
+                    <div className="flex flex-wrap gap-4 mt-8">
                       <motion.a
                         href={selectedJob.applyLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="flex-1 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold transition-all text-center"
+                        className="flex-1 min-w-[200px] py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold transition-all text-center shadow-lg shadow-cyan-500/30"
                       >
-                        Apply on Company Website
+                        🏢 Official Apply Link
+                      </motion.a>
+                      <motion.a
+                        href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(selectedJob.title)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="flex-1 min-w-[200px] py-4 rounded-xl bg-[#0a66c2] hover:bg-[#004182] text-white font-bold transition-all text-center shadow-lg shadow-blue-500/20"
+                      >
+                        💼 LinkedIn Jobs
+                      </motion.a>
+                      <motion.a
+                        href={`https://www.indeed.com/jobs?q=${encodeURIComponent(selectedJob.title)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="flex-1 min-w-[200px] py-4 rounded-xl bg-[#003A9B] hover:bg-[#00225A] text-white font-bold transition-all text-center shadow-lg"
+                      >
+                        🔍 Search Indeed
+                      </motion.a>
+                      <motion.a
+                        href={`https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodeURIComponent(selectedJob.title)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="flex-1 min-w-[200px] py-4 rounded-xl bg-[#0CAA41] hover:bg-[#0A8A34] text-white font-bold transition-all text-center shadow-lg"
+                      >
+                        🌟 Glassdoor
                       </motion.a>
                       <motion.button
                         onClick={() => setSelectedJob(null)}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="flex-1 py-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold transition-all"
+                        className="w-full py-4 mt-2 rounded-xl bg-gray-800 hover:bg-red-500/20 hover:text-red-400 border border-transparent hover:border-red-500/50 text-gray-300 font-bold transition-all"
                       >
-                        Close
+                        Close Modal
                       </motion.button>
                     </div>
                   </div>

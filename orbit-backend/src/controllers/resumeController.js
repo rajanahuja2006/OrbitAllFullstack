@@ -596,19 +596,49 @@ export const getJobMatches = async (req, res) => {
     const completedCourses = user?.completedCourses || [];
     const combinedSkills = [...new Set([...skills, ...completedCourses])];
 
-    const jobAnalysis = generateJobMatches(combinedSkills, atsScore);
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const prompt = `
+You are an expert technical recruiter and AI career coach. Based on the user's ATS score of ${atsScore} and the following skills: [${combinedSkills.join(", ")}], generate a hyper-realistic list of 10-12 highly personalized job opportunities that EXACTLY match their profile. Do not invent fake companies, use real tech companies or startups. Provide highly specific job titles and locations.
+
+Respond ONLY with a valid JSON object starting with '{' and ending with '}'. Do not use markdown wrappers, code blocks, or explanations. 
+
+Use this exact schema:
+{
+  "jobs": [
+    {
+      "id": 1,
+      "title": "Machine Learning Engineer",
+      "company": "OpenAI",
+      "location": "San Francisco, CA (Remote)",
+      "requiredSkills": ["Python", "TensorFlow", "NLP"],
+      "minAtsScore": 80,
+      "skillMatchPercentage": 95,
+      "description": "A tailored description emphasizing why this role uniquely fits their specific background based on their skills...",
+      "applyLink": "https://www.linkedin.com/jobs/search/?keywords=Machine+Learning+Engineer+OpenAI"
+    }
+  ],
+  "missingSkills": ["List 3-5 high-value, specific skills they should learn next to level up"]
+}
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    const aiResponseText = response.text().trim();
+    const cleanedJson = aiResponseText.replace(/```json/g, "").replace(/```/g, "").trim();
+    const jobAnalysis = JSON.parse(cleanedJson);
 
     res.json({
-      message: "Job matches generated successfully",
-      jobs: jobAnalysis.matchedJobs,
-      totalJobs: jobAnalysis.matchedJobs.length,
-      missingSkills: jobAnalysis.missingSkills,
-      skillRoadmap: jobAnalysis.skillRoadmap,
-      currentSkills: skills,
-      atsScore,
+      message: "Job matches generated successfully by AI",
+      jobs: jobAnalysis.jobs || [],
+      totalJobs: jobAnalysis.jobs?.length || 0,
+      missingSkills: jobAnalysis.missingSkills || [],
+      atsScore: atsScore,
     });
   } catch (error) {
-    console.error(error);
+    console.error("AI Job Match Error:", error);
     res.status(500).json({ message: "Failed to generate job matches" });
   }
 };
