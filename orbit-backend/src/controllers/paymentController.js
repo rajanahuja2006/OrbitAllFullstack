@@ -210,6 +210,11 @@ export const getSubscription = async (req, res) => {
 
 // Check if user can upload resume
 export const canUploadResume = async (userId) => {
+  // Bypass subscription for local development testing
+  if (process.env.NODE_ENV === "development") {
+    return { allowed: true, plan: "pro", uploadsRemaining: 999 };
+  }
+
   try {
     const user = await User.findById(userId).populate("subscription");
 

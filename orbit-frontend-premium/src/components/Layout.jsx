@@ -14,10 +14,14 @@ import {
 
 import { AuthContext } from "../context/AuthContext";
 import SoftBackground from "./SoftBackground";
+import ProfileSettingsModal from "./ProfileSettingsModal";
+import { User as UserIcon } from "lucide-react";
+import { useState } from "react";
 
 export default function Layout() {
   const navigate = useNavigate();
   const { logout, user } = useContext(AuthContext);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const menu = [
     { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard /> },
@@ -41,7 +45,15 @@ export default function Layout() {
         <div className="mx-auto max-w-7xl flex items-center justify-between gap-4">
           <div className="text-xl font-bold tracking-wide text-white">Orbit AI Suite</div>
           <div className="text-xs text-white/70">Next-gen career OS with playful holographic UI</div>
-          <Link to="/pricing" className="btn-secondary inline-flex px-4 py-2 text-xs">Upgrade</Link>
+          <div className="flex items-center gap-3">
+            <Link to="/pricing" className="btn-secondary inline-flex px-4 py-2 text-xs">Upgrade</Link>
+            <button 
+              onClick={() => setIsProfileOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 border border-white/10 text-white transition hover:bg-white/20 hover:scale-105 shadow-glow"
+            >
+              <UserIcon size={18} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -90,6 +102,11 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      <ProfileSettingsModal 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+      />
     </div>
   );
 }
