@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { API_CONFIG } from "../utils/api";
-import SoftBackground from "../components/SoftBackground";
 
 export default function Subscription() {
   const navigate = useNavigate();
@@ -67,7 +66,6 @@ export default function Subscription() {
 
   return (
     <div className="min-h-screen relative text-white">
-      <SoftBackground />
 
       <div className="relative z-10 max-w-3xl mx-auto px-6 py-20">
         <motion.div

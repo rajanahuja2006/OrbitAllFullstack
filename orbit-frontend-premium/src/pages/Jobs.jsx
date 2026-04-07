@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { API_CONFIG } from "../utils/api";
-import SoftBackground from "../components/SoftBackground";
 
 export default function Jobs() {
   const navigate = useNavigate();
@@ -74,7 +73,6 @@ export default function Jobs() {
   if (loading) {
     return (
       <div className="min-h-screen relative text-white">
-        <SoftBackground />
         <div className="relative z-10 flex items-center justify-center h-screen">
           <div className="text-center">
             <motion.div
@@ -96,7 +94,6 @@ export default function Jobs() {
   if (error) {
     return (
       <div className="min-h-screen relative text-white">
-        <SoftBackground />
         <div className="relative z-10 max-w-4xl mx-auto px-6 py-20">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-5xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent mb-8">
@@ -122,7 +119,6 @@ export default function Jobs() {
 
   return (
     <div className="min-h-screen relative text-white">
-      <SoftBackground />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-20">
         {/* Header */}

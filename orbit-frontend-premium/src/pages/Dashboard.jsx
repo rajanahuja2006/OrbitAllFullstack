@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { API_CONFIG, getApiBase } from "../utils/api";
-import SoftBackground from "../components/SoftBackground";
 import MorphingCard from "../components/MorphingCard";
 import InteractiveButton from "../components/InteractiveButton";
 
@@ -179,7 +178,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen relative text-white">
-      <SoftBackground />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
 

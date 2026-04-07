@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 
 import { AuthContext } from "../context/AuthContext";
-import SoftBackground from "./SoftBackground";
 import ProfileSettingsModal from "./ProfileSettingsModal";
 import { User as UserIcon } from "lucide-react";
 import { useState } from "react";
@@ -39,7 +38,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen relative text-white">
-      <SoftBackground />
 
       <div className="fixed left-0 right-0 top-0 z-20 p-4 backdrop-blur-xl bg-slate-900/35 border-b border-white/10 shadow-glow">
         <div className="mx-auto max-w-7xl flex items-center justify-between gap-4">

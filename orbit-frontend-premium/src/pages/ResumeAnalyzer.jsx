@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import API_CONFIG from "../utils/api";
-import SoftBackground from "../components/SoftBackground";
 
 export default function ResumeAnalyzer() {
   // Premium UI/UX redesign with drag-and-drop and animations
@@ -91,7 +90,6 @@ export default function ResumeAnalyzer() {
 
   return (
     <div className="min-h-screen relative text-white">
-      <SoftBackground />
 
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-12 min-h-screen flex flex-col">
         {/* Header */}

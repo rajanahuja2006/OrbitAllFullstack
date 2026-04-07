@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { API_CONFIG } from "../utils/api";
-import SoftBackground from "../components/SoftBackground";
 
 const RESOURCE_LINKS = {
   "Codecademy": "https://www.codecademy.com/",
@@ -156,7 +155,6 @@ export default function Roadmap() {
   if (loading) {
     return (
       <div className="min-h-screen relative text-white">
-        <SoftBackground />
         <div className="relative z-10 flex items-center justify-center h-screen">
           <div className="text-center">
             <motion.div
@@ -178,7 +176,6 @@ export default function Roadmap() {
   if (error) {
     return (
       <div className="min-h-screen relative text-white">
-        <SoftBackground />
         <div className="relative z-10 max-w-4xl mx-auto px-6 py-20">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-5xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent mb-8">
@@ -201,7 +198,6 @@ export default function Roadmap() {
 
   return (
     <div className="min-h-screen relative text-white">
-      <SoftBackground />
 
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-20">
         {/* Header */}

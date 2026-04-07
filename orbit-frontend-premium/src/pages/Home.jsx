@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { Sparkles, Rocket, Brain, Target } from "lucide-react";
-import SoftBackground from "../components/SoftBackground";
 
 function FeatureCard({ icon, title, desc }) {
   return (
@@ -19,7 +18,6 @@ function FeatureCard({ icon, title, desc }) {
 export default function Home() {
   return (
     <div className="min-h-screen relative">
-      <SoftBackground />
 
       <div className="relative z-10 px-6 py-16 lg:px-12">
         <motion.section

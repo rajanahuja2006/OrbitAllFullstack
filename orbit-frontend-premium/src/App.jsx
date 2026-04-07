@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import SoftBackground from "./components/SoftBackground";
 
 import Dashboard from "./pages/Dashboard";
 import ResumeAnalyzer from "./pages/ResumeAnalyzer";
@@ -17,7 +18,9 @@ import PaymentCancelled from "./pages/PaymentCancelled";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <>
+      <SoftBackground />
+      <BrowserRouter>
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
@@ -56,5 +59,6 @@ export default function App() {
         <Route path="*" element={<Login />} />
       </Routes>
     </BrowserRouter>
+    </>
   );
 }

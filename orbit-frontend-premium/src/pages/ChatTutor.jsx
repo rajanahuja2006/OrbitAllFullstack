@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getApiBase } from "../utils/api";
-import SoftBackground from "../components/SoftBackground";
 
 export default function ChatTutor() {
   const [messages, setMessages] = useState([
@@ -89,7 +88,6 @@ export default function ChatTutor() {
 
   return (
     <div className="min-h-screen relative text-white">
-      <SoftBackground />
 
       <div className="relative z-10 max-w-4xl mx-auto px-6 py-12 h-screen flex flex-col">
         {/* Header */}

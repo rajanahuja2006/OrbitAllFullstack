@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { getApiBase } from "../utils/api";
-import SoftBackground from "../components/SoftBackground";
 
 const PLANS = [
   {
@@ -105,7 +104,6 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen relative overflow-hidden text-white">
-      <SoftBackground />
 
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-16">
         <motion.div

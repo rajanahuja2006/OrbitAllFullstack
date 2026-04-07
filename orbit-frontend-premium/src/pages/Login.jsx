@@ -2,7 +2,6 @@ import { useState, useContext } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import API_CONFIG from "../utils/api";
-import SoftBackground from "../components/SoftBackground";
 import { motion } from "framer-motion";
 
 export default function Login() {
@@ -58,7 +57,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      <SoftBackground />
 
       {stars.map((star) => (
         <span
@@ -67,8 +65,6 @@ export default function Login() {
           style={{ width: 3 + Math.random() * 2, height: 3 + Math.random() * 2, top: star.top, left: star.left, animationDelay: star.delay }}
         />
       ))}
-
-      <div className="login-halo" />
 
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.96 }}
