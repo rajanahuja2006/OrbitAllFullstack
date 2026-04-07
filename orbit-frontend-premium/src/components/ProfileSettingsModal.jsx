@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Settings, Save, Sparkles, BookOpen, Clock, Laptop } from "lucide-react";
-import { useTheme } from "../context/ThemeContext";
 
 export default function ProfileSettingsModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState("profile");
@@ -76,7 +75,7 @@ export default function ProfileSettingsModal({ isOpen, onClose }) {
               <button onClick={onClose} className="rounded-xl px-4 py-2 text-sm font-medium text-white/70 hover:bg-white/10 transition">
                 Cancel
               </button>
-              <button className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition hover:opacity-90">
+              <button onClick={onClose} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-2 text-sm font-medium text-white shadow-lg shadow-indigo-500/25 transition hover:opacity-90">
                 <Save size={16} />
                 Save Changes
               </button>
@@ -181,14 +180,6 @@ function ProfileContent() {
 }
 
 function SettingsContent() {
-  const { theme, setTheme } = useTheme();
-  
-  const themesGroups = [
-    { name: "purple", label: "Blue & Purple", color: "bg-indigo-500" },
-    { name: "green", label: "Green & Yellow", color: "bg-emerald-500" },
-    { name: "blue", label: "Blue & Cyan", color: "bg-blue-500" },
-    { name: "rose", label: "Rose & Orange", color: "bg-rose-500" },
-  ];
 
   return (
     <div className="space-y-8 text-white animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -235,22 +226,6 @@ function SettingsContent() {
         <div className="space-y-3 mb-6">
           <ToggleSwitch label="Public Profile" description="Allow recruiters to see your verified skills and roadmap." />
           <ToggleSwitch label="Data Sharing" description="Share anonymized learning data to improve Orbit AI." defaultChecked />
-        </div>
-        
-        <div className="mb-6 p-5 rounded-xl border border-white/10 bg-white/5">
-          <p className="text-sm font-semibold mb-4 tracking-wide text-white/80 uppercase">Ambient Background Colors</p>
-          <div className="flex flex-wrap gap-6">
-            {themesGroups.map(t => (
-              <button
-                key={t.name}
-                onClick={() => setTheme(t.name)}
-                className={`flex flex-col items-center gap-3 transition-transform hover:-translate-y-1`}
-              >
-                <div className={`w-10 h-10 rounded-full ${t.color} ${theme === t.name ? "ring-4 ring-white shadow-[0_0_15px_rgba(255,255,255,0.4)] scale-110" : "opacity-50 hover:opacity-100"}`} />
-                <span className={`text-[11px] uppercase font-medium ${theme === t.name ? "text-white" : "text-white/50"}`}>{t.label}</span>
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
