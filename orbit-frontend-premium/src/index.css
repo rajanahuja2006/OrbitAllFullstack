@@ -6,7 +6,7 @@
 
 @layer base {
   html, body {
-    height: 100%;
+    min-height: 100vh;
     background-color: #050814;
     background-image:
       radial-gradient(ellipse at top right, rgba(99, 102, 241, 0.15), transparent 40%),
@@ -34,15 +34,46 @@
     filter: invert(1) hue-rotate(180deg);
   }
 
+  /* Force background to be a solid near-black so it inverts to a very clean cool-white/slate-50 */
+  html.light-mode-active body {
+    background-color: #030303 !important; 
+    background-image:
+      radial-gradient(ellipse at top right, rgba(124, 58, 237, 0.3), transparent 50%),
+      radial-gradient(ellipse at bottom left, rgba(14, 165, 233, 0.3), transparent 50%) !important;
+  }
+
   html.light-mode-active img, 
   html.light-mode-active video, 
   html.light-mode-active iframe {
     filter: invert(1) hue-rotate(180deg); /* Counter-invert media */
   }
 
+  /* Fix shadows: pre-invert them with white/high-opacity so they become dark/soft-opacity in light mode */
+  html.light-mode-active .glass,
+  html.light-mode-active .glass-md,
+  html.light-mode-active .glass-strong,
+  html.light-mode-active .frosted-glass,
+  html.light-mode-active .glow-card {
+    box-shadow: 0 15px 45px -10px rgba(255, 255, 255, 0.95) !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+  }
+
+  /* Fix button glow so it doesn't look washed out */
+  html.light-mode-active .btn-primary {
+    box-shadow: 0 10px 25px rgba(255, 255, 255, 0.7) !important;
+    color: #ffffff !important; /* Button text needs to be white pre-inversion to be black in light mode */
+  }
+
+  html.light-mode-active .input-soft,
+  html.light-mode-active .neon-input {
+    background-color: #0a0a0a !important; /* Inverts to light gray */
+    color: #ffffff !important;
+  }
+
   /* Make sure the text on light mode provides adequate contrast */
-  html.light-mode-active p.text-gray-300 {
-    color: #4b5563; /* Make grays darker when inverted */
+  html.light-mode-active p.text-gray-300,
+  html.light-mode-active p.text-gray-400 {
+    color: #a0a0a0 !important; /* Forces a mid-tone gray that inverts perfectly to dark slate */
   }
 }
 
