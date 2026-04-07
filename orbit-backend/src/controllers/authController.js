@@ -190,12 +190,12 @@ function generateJobMatches(userSkills, atsScore) {
     const userSkillsLower = userSkills.map(s => s.toLowerCase());
     const requiredSkillsLower = job.requiredSkills.map(s => s.toLowerCase());
     
-    const matchingSkills = requiredSkills.filter(skill => 
-      userSkillsLower.includes(skill)
+    const matchingSkills = job.requiredSkills.filter(skill => 
+      userSkillsLower.includes(skill.toLowerCase())
     );
     
     // Calculate skill match percentage
-    const skillMatchPercentage = (matchingSkills.length / requiredSkills.length) * 100;
+    const skillMatchPercentage = (matchingSkills.length / job.requiredSkills.length) * 100;
     
     // Consider job if user has at least 50% of required skills
     return skillMatchPercentage >= 50;
