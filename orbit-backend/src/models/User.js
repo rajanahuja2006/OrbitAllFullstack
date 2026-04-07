@@ -32,11 +32,6 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0, // 0 means free tier, no uploads
     },
-
-    completedCourses: {
-      type: [String],
-      default: [],
-    },
   },
   { timestamps: true }
 );

@@ -1,380 +1,292 @@
-import { useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import API_CONFIG from "../utils/api";
+import { useState, useEffect, useContext, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
+import { API_CONFIG } from "../utils/api";
 
 export default function ResumeAnalyzer() {
-  // Premium UI/UX redesign with drag-and-drop and animations
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [analysis, setAnalysis] = useState(null);
-  const [error, setError] = useState(null);
-  const [dragActive, setDragActive] = useState(false);
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const [resumeData, setResumeData] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [dragging, setDragging] = useState(false);
 
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
+  useEffect(() => { fetchResumeData(); }, []);
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    const selectedFile = e.dataTransfer.files[0];
-    if (selectedFile && selectedFile.type === "application/pdf") {
-      setFile(selectedFile);
-      setError(null);
-    } else {
-      setError("Please upload a PDF file");
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile && selectedFile.type === "application/pdf") {
-      setFile(selectedFile);
-      setError(null);
-    } else {
-      setError("Please upload a PDF file");
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
-      setError("Please select a file first");
-      return;
-    }
-
-    setUploading(true);
-    setError(null);
-    const formData = new FormData();
-    formData.append("resume", file);
-
+  const fetchResumeData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(API_CONFIG.RESUME_UPLOAD, {
+      const res = await fetch(API_CONFIG.RESUME_MY_RESUMES, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.length > 0) setResumeData(data[0]);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    if (!file.type.includes("pdf") && !file.name.endsWith(".pdf")) {
+      setUploadMessage("❌ Please upload a PDF file only");
+      setTimeout(() => setUploadMessage(""), 4000);
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadMessage("❌ File size must be less than 10MB");
+      setTimeout(() => setUploadMessage(""), 4000);
+      return;
+    }
+    setUploading(true);
+    setUploadProgress(15);
+    setUploadMessage("Uploading...");
+    const formData = new FormData();
+    formData.append("resume", file);
+    try {
+      const token = localStorage.getItem("token");
+      setUploadProgress(40);
+      const res = await fetch(API_CONFIG.RESUME_UPLOAD, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setAnalysis(data);
-        setFile(null);
+      setUploadProgress(80);
+      const data = await res.json();
+      if (res.ok) {
+        setUploadProgress(100);
+        setResumeData(data);
+        setUploadMessage("✅ Analysis complete!");
+        setTimeout(() => setUploadMessage(""), 3000);
       } else {
-        setError(data.message || "Upload failed");
+        setUploadMessage(`❌ ${data.message || "Upload failed"}`);
+        setTimeout(() => setUploadMessage(""), 4000);
       }
     } catch (err) {
-      console.error("Upload error:", err);
-      setError("Error uploading resume");
+      setUploadMessage(`❌ ${err.message || "Connection error"}`);
+      setTimeout(() => setUploadMessage(""), 4000);
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
-  const getAtsColor = (score) => {
-    if (score >= 80) return "from-green-400 to-emerald-400";
-    if (score >= 60) return "from-cyan-400 to-blue-400";
-    if (score >= 40) return "from-yellow-400 to-orange-400";
-    return "from-red-400 to-pink-400";
-  };
+  const ats = resumeData?.atsScore ?? 0;
+  // SVG circle path: r=88, circumference = 2π*88 ≈ 552.9
+  const circ = 552.9;
+  const offset = circ - (ats / 100) * circ;
 
   return (
-    <div className="min-h-screen relative text-white">
+    <div className="min-h-screen p-6 md:p-10 max-w-[1600px] relative">
+      {/* Hidden input */}
+      <input ref={fileInputRef} type="file" accept=".pdf" onChange={(e) => handleFile(e.target.files?.[0])} className="hidden" />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-12 min-h-screen flex flex-col">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
-        >
-          <h1 className="text-5xl font-black bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-3">
-            Resume Analyzer 📄
-          </h1>
-          <p className="text-lg text-gray-300">
-            Upload your resume and get AI-powered recommendations to boost your ATS score
+      {/* Background gradient */}
+      <div className="absolute inset-0 pointer-events-none orbit-gradient" />
+
+      {/* Header */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 relative z-10 animate-fade-in-up">
+        <div>
+          <h2 className="text-4xl md:text-5xl font-headline font-bold text-white tracking-tighter">
+            Resume <span className="text-primary">Intelligence</span>
+          </h2>
+          <p className="text-slate-400 font-medium mt-2 max-w-2xl">
+            Analyze your professional narrative against industry-standard ATS algorithms to land your dream role.
           </p>
-        </motion.div>
+        </div>
+        <div className="hidden md:flex items-center gap-4 mt-4 md:mt-0">
+          <button className="w-12 h-12 rounded-2xl glass flex items-center justify-center text-slate-300 hover:text-white transition-all">
+            <span className="material-symbols-outlined">notifications</span>
+          </button>
+          <div className="flex items-center gap-4 pl-6 border-l border-white/10">
+            <div className="text-right">
+              <p className="text-sm font-bold text-white">{user?.name || "Operator"}</p>
+              <p className="text-[9px] text-secondary font-black uppercase tracking-widest">Orbit · Navigator</p>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center text-white font-bold text-lg">
+              {(user?.name || "O")[0].toUpperCase()}
+            </div>
+          </div>
+        </div>
+      </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
-          {/* Left Column - Upload Section */}
-          <div className="lg:col-span-1">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="h-full"
+      {/* Bento Grid */}
+      <div className="grid grid-cols-12 gap-6 md:gap-8 relative z-10">
+        {/* Left column */}
+        <div className="col-span-12 lg:col-span-8 flex flex-col gap-6 md:gap-8">
+          {/* Upload area */}
+          <div
+            className={`glass p-2 rounded-[3rem] animate-fade-in-up animate-delay-100 transition-all ${dragging ? "ring-2 ring-primary" : ""}`}
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files?.[0]); }}
+          >
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-primary/20 rounded-[2.5rem] p-12 md:py-20 flex flex-col items-center justify-center text-center bg-white/5 hover:bg-white/[0.08] transition-all cursor-pointer group relative overflow-hidden"
             >
-              {/* File Upload Box */}
-              <div
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                className={`relative h-64 rounded-3xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center p-8 cursor-pointer overflow-hidden group ${
-                  dragActive
-                    ? "border-purple-400 bg-purple-500/20"
-                    : "border-purple-500/50 bg-gradient-to-br from-gray-900/50 to-black/50 hover:border-purple-400"
-                }`}
-              >
-                {/* Gradient Background */}
-                <div
-                  className="absolute inset-0 bg-gradient-to-br from-purple-600/0 to-pink-600/0 group-hover:from-purple-600/10 group-hover:to-pink-600/10 transition-all duration-300"
-                  onClick={() => fileInputRef.current?.click()}
-                />
-
-                {/* Content */}
-                <div className="relative z-10 text-center">
-                  <motion.div
-                    animate={{ y: dragActive ? -5 : 0 }}
-                    className="text-5xl mb-3"
-                  >
-                    📤
-                  </motion.div>
-                  <p className="text-lg font-semibold text-purple-300 mb-2">
-                    {file ? file.name : "Drop your PDF here"}
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    or click to browse
-                  </p>
-                </div>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  disabled={uploading}
-                />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none" />
+              <div className="w-20 h-20 rounded-3xl bg-primary/20 flex items-center justify-center mb-6 shadow-2xl group-hover:scale-110 transition-transform duration-500 border border-primary/30">
+                <span className="material-symbols-outlined text-primary text-4xl">cloud_upload</span>
               </div>
-
-              {/* Error Message */}
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="mt-4 p-4 rounded-xl bg-red-500/20 border border-red-500/50 text-red-200 text-sm"
-                  >
-                    ⚠️ {error}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Upload Button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleUpload}
-                disabled={!file || uploading}
-                className={`w-full mt-6 py-3 rounded-xl font-bold transition-all duration-300 ${
-                  !file || uploading
-                    ? "bg-gray-600/50 text-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-500/50"
-                }`}
-              >
-                {uploading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity }}
-                    >
-                      ⏳
-                    </motion.div>
-                    Analyzing...
+              {uploading ? (
+                <>
+                  <h3 className="text-2xl font-bold text-white mb-2">Analyzing your resume...</h3>
+                  <p className="text-slate-400 text-sm mb-6">{uploadProgress}% complete</p>
+                  <div className="w-48 h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }} />
                   </div>
-                ) : (
-                  "Analyze Resume"
-                )}
-              </motion.button>
-            </motion.div>
+                </>
+              ) : resumeData ? (
+                <>
+                  <h3 className="text-2xl font-bold text-white mb-2">Resume Analyzed ✓</h3>
+                  <p className="text-slate-400 text-sm mb-6">Drop a new file or click to re-analyze</p>
+                  <button className="px-10 py-4 bg-primary/20 text-primary rounded-2xl font-black text-xs uppercase tracking-widest border border-primary/30 hover:bg-primary hover:text-white transition-all">
+                    Upload New Resume
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-2xl font-bold text-white mb-2">Drop your resume here</h3>
+                  <p className="text-slate-400 text-sm mb-8 font-medium">Supports PDF (Max 10MB)</p>
+                  <button className="px-10 py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-1 transition-all active:scale-95">
+                    Browse Files
+                  </button>
+                </>
+              )}
+              {uploadMessage && (
+                <p className="mt-4 text-sm font-semibold text-white">{uploadMessage}</p>
+              )}
+            </div>
           </div>
 
-          {/* Right Column - Results */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-2"
-          >
-            <AnimatePresence mode="wait">
-              {analysis ? (
-                <div className="space-y-6">
-                  {/* ATS Score Card */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="rounded-3xl bg-gradient-to-br from-gray-900/80 to-black/80 border border-purple-500/30 p-8 overflow-hidden relative"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 to-pink-600/10" />
-                    <div className="relative z-10">
-                      <p className="text-gray-400 text-sm font-semibold mb-3">ATS Score</p>
-                      <div className="flex items-end gap-6 mb-6">
-                        <div className={`text-6xl font-black bg-gradient-to-r ${getAtsColor(analysis.atsScore)} bg-clip-text text-transparent`}>
-                          {analysis.atsScore}%
-                        </div>
-                        <motion.div
-                          animate={{ width: `${analysis.atsScore}%` }}
-                          transition={{ duration: 1, ease: "easeOut" }}
-                          className={`flex-1 h-3 rounded-full bg-gradient-to-r ${getAtsColor(analysis.atsScore)}`}
-                        />
-                      </div>
-                      <p className="text-gray-400 text-sm">
-                        {analysis.atsScore >= 80
-                          ? "🌟 Excellent! Your resume is highly optimized."
-                          : analysis.atsScore >= 60
-                          ? "👍 Good! Some improvements possible."
-                          : analysis.atsScore >= 40
-                          ? "⚠️ Average. Consider the suggestions below."
-                          : "❌ Needs significant improvement. Follow the suggestions."}
-                      </p>
-
-                      {/* ATS Breakdown Bars */}
-                      {analysis.atsBreakdown && (
-                        <div className="mt-8 space-y-4 pt-6 border-t border-purple-500/20">
-                          <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Score Breakdown</p>
-                          
-                          <div className="flex items-center gap-4">
-                            <span className="w-24 text-sm text-gray-300">💥 Impact</span>
-                            <div className="flex-1 h-2 rounded-full bg-gray-800 overflow-hidden">
-                              <motion.div
-                                animate={{ width: `${analysis.atsBreakdown.impact || 0}%` }}
-                                transition={{ duration: 1, delay: 0.2 }}
-                                className="h-full bg-gradient-to-r from-red-500 to-orange-500"
-                              />
-                            </div>
-                            <span className="w-8 text-right text-xs font-bold text-orange-400">{analysis.atsBreakdown.impact}%</span>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            <span className="w-24 text-sm text-gray-300">🔑 Keywords</span>
-                            <div className="flex-1 h-2 rounded-full bg-gray-800 overflow-hidden">
-                              <motion.div
-                                animate={{ width: `${analysis.atsBreakdown.keywords || 0}%` }}
-                                transition={{ duration: 1, delay: 0.4 }}
-                                className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
-                              />
-                            </div>
-                            <span className="w-8 text-right text-xs font-bold text-cyan-400">{analysis.atsBreakdown.keywords}%</span>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            <span className="w-24 text-sm text-gray-300">📐 Formatting</span>
-                            <div className="flex-1 h-2 rounded-full bg-gray-800 overflow-hidden">
-                              <motion.div
-                                animate={{ width: `${analysis.atsBreakdown.formatting || 0}%` }}
-                                transition={{ duration: 1, delay: 0.6 }}
-                                className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
-                              />
-                            </div>
-                            <span className="w-8 text-right text-xs font-bold text-pink-400">{analysis.atsBreakdown.formatting}%</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-
-                  {/* Skills Card */}
-                  {analysis.skills && analysis.skills.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                      className="rounded-3xl bg-gradient-to-br from-gray-900/80 to-black/80 border border-cyan-500/30 p-8 overflow-hidden relative"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-600/10 to-blue-600/10" />
-                      <div className="relative z-10">
-                        <p className="text-gray-400 text-sm font-semibold mb-4">🛠️ Skills Detected</p>
-                        <motion.div className="flex flex-wrap gap-3">
-                          {analysis.skills.slice(0, 12).map((skill, idx) => (
-                            <motion.div
-                              key={idx}
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: idx * 0.03 }}
-                              className="px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-400/40 text-cyan-300 text-sm font-semibold hover:border-cyan-300 transition-all"
-                            >
-                              {skill}
-                            </motion.div>
-                          ))}
-                        </motion.div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Suggestions Card */}
-                  {analysis.suggestions && analysis.suggestions.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="rounded-3xl bg-gradient-to-br from-gray-900/80 to-black/80 border border-green-500/30 p-8 overflow-hidden relative"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-green-600/10 to-emerald-600/10" />
-                      <div className="relative z-10">
-                        <p className="text-gray-400 text-sm font-semibold mb-4">💡 Suggestions</p>
-                        <motion.div className="space-y-3">
-                          {analysis.suggestions.slice(0, 5).map((suggestion, idx) => (
-                            <motion.div
-                              key={idx}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: idx * 0.05 }}
-                              className="flex gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20 hover:border-green-400/40 transition-all"
-                            >
-                              <span className="text-green-400 flex-shrink-0">✓</span>
-                              <p className="text-gray-300 text-sm">{suggestion}</p>
-                            </motion.div>
-                          ))}
-                        </motion.div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* New Upload Button */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setAnalysis(null)}
-                    className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 text-purple-300 hover:border-purple-400 transition-all"
-                  >
-                    📤 Upload Another Resume
-                  </motion.button>
-                </div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex items-center justify-center h-96 rounded-3xl bg-gradient-to-br from-gray-900/50 to-black/50 border border-purple-500/20"
-                >
-                  <div className="text-center">
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="text-6xl mb-4"
-                    >
-                      📋
-                    </motion.div>
-                    <p className="text-gray-400">
-                      Upload a resume to see analysis results
-                    </p>
+          {/* Feedback row */}
+          {resumeData && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+              {/* Strengths */}
+              <div className="glass p-8 md:p-10 rounded-[3rem] border-t border-secondary/20 animate-fade-in-up animate-delay-200">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+                  <h3 className="text-xl font-bold text-white font-headline">Strengths</h3>
+                </div>
+                <ul className="space-y-5">
+                  {(resumeData.strengths?.length
+                    ? resumeData.strengths
+                    : resumeData.skills?.slice(0, 3).map((s) => `Strong proficiency in ${s}`) || []
+                  ).slice(0, 3).map((item, i) => (
+                    <li key={i} className="flex items-start gap-4">
+                      <div className="mt-2 w-2 h-2 rounded-full bg-secondary shrink-0 shadow-[0_0_10px_rgba(16,185,129,1)]" />
+                      <p className="text-sm text-slate-300 font-medium leading-relaxed">{item}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Improvements */}
+              <div className="glass p-8 md:p-10 rounded-[3rem] border-t border-red-500/20 animate-fade-in-up animate-delay-300">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-red-400" style={{ fontVariationSettings: "'FILL' 1" }}>error_outline</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white font-headline">Improvements</h3>
+                </div>
+                <ul className="space-y-5">
+                  {(resumeData.suggestions || ["Add measurable impact metrics", "Include more keywords", "Improve summary section"]).slice(0, 3).map((item, i) => (
+                    <li key={i} className="flex items-start gap-4">
+                      <div className="mt-2 w-2 h-2 rounded-full bg-red-400 shrink-0 shadow-[0_0_10px_rgba(239,68,68,0.8)]" />
+                      <p className="text-sm text-slate-300 font-medium leading-relaxed">{item}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Empty state hint */}
+          {!resumeData && (
+            <div className="glass p-8 rounded-[2rem] animate-fade-in-up animate-delay-200 text-center">
+              <p className="text-slate-400 text-sm">Upload your resume above to see strengths, improvement areas, and your ATS score.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6 md:gap-8">
+          {/* ATS Score circle */}
+          <div className="glass p-10 rounded-[3rem] flex flex-col items-center justify-center text-center relative overflow-hidden animate-fade-in-up animate-delay-400">
+            <div className="absolute -right-20 -top-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
+            <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-10">ATS Performance Score</h3>
+            <div className="relative w-48 h-48 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 192 192">
+                <circle className="text-white/5" cx="96" cy="96" r="88" fill="transparent" stroke="currentColor" strokeWidth="12" />
+                <circle
+                  cx="96" cy="96" r="88" fill="transparent"
+                  stroke="#6366f1" strokeWidth="12" strokeLinecap="round"
+                  strokeDasharray={circ}
+                  strokeDashoffset={resumeData ? offset : circ}
+                  style={{ filter: "drop-shadow(0 0 10px rgba(99,102,241,0.4))", transition: "stroke-dashoffset 1.5s ease-out" }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-7xl font-bold font-headline text-white tracking-tighter">{ats}</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  {ats >= 80 ? "EXCELLENT" : ats >= 60 ? "GOOD" : ats > 0 ? "FAIR" : "PENDING"}
+                </span>
+              </div>
+            </div>
+            <div className="mt-10 px-6 py-2 bg-secondary/10 border border-secondary/20 rounded-full">
+              <p className="text-secondary font-black text-[10px] tracking-widest uppercase">
+                {resumeData ? "ANALYSIS COMPLETE" : "AWAITING UPLOAD"}
+              </p>
+            </div>
+          </div>
+
+          {/* Skill Gaps */}
+          <div className="glass p-10 rounded-[3rem] flex-grow animate-fade-in-up animate-delay-500 relative overflow-hidden">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary">bolt</span>
+              </div>
+              <h3 className="text-xl font-bold text-white font-headline">Neural Skill Gaps</h3>
+            </div>
+            <p className="text-[11px] text-slate-400 mb-8 font-medium uppercase tracking-wider">
+              {resumeData ? "Missing keywords for target roles:" : "Upload resume to detect gaps"}
+            </p>
+            <div className="space-y-3">
+              {(resumeData?.skillGaps || ["Cloud Architecture", "System Design", "GraphQL", "Kubernetes"]).slice(0, 4).map((gap) => (
+                <div key={gap} className="flex items-center justify-between p-5 bg-white/5 rounded-2xl hover:bg-white/10 transition-all group cursor-pointer border border-white/5">
+                  <span className="text-sm font-bold text-slate-200">{gap}</span>
+                  <span className="material-symbols-outlined text-red-400 text-xl group-hover:scale-125 transition-transform">add_circle</span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => navigate("/roadmap")}
+              className="w-full mt-10 py-4 bg-transparent border border-primary text-primary rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary hover:text-white transition-all active:scale-95"
+            >
+              View Learning Roadmap
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="mt-20 pt-12 pb-16 border-t border-white/5 flex justify-between items-center relative z-10 animate-fade-in-up">
+        <div className="flex items-center gap-4">
+          <span className="text-xl font-bold text-white font-headline">Orbit Engine</span>
+          <span className="text-[10px] font-medium tracking-wider text-slate-600">© 2024 CELESTIAL CAREER ENGINE</span>
+        </div>
+        <div className="flex gap-10">
+          {["Operations", "Privacy", "Protocol"].map((l) => (
+            <span key={l} className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-white transition-colors cursor-pointer">{l}</span>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }

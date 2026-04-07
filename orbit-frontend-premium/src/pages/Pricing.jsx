@@ -2,12 +2,13 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { getApiBase } from "../utils/api";
+import SoftBackground from "../components/SoftBackground";
 
 const PLANS = [
   {
     name: "Basic",
-    price: "₹169",
-    priceValue: 16900,
+    price: "$2.99",
+    priceValue: 299,
     period: "month",
     resumeUploads: "5",
     features: [
@@ -23,8 +24,8 @@ const PLANS = [
   },
   {
     name: "Premium",
-    price: "₹499",
-    priceValue: 49900,
+    price: "$9.99",
+    priceValue: 999,
     period: "month",
     resumeUploads: "50",
     features: [
@@ -34,6 +35,7 @@ const PLANS = [
       "Priority Support",
     ],
     highlight: true,
+    popular: true,
     gradient: "from-purple-500/20 to-pink-500/20",
     border: "border-purple-500/50",
     button: "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/25",
@@ -41,8 +43,8 @@ const PLANS = [
   },
   {
     name: "Pro",
-    price: "₹1,099",
-    priceValue: 109900,
+    price: "$19.99",
+    priceValue: 1999,
     period: "month",
     resumeUploads: "Unlimited",
     features: [
@@ -68,12 +70,17 @@ export default function Pricing() {
   const navigate = useNavigate();
 
   const handleSubscribe = async (planId) => {
+    // Check if logged in first
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login", { state: { from: { pathname: "/pricing" } } });
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const token = localStorage.getItem("token");
-
       const response = await fetch(`${apiBase}/api/payment/create-checkout-session`, {
         method: "POST",
         headers: {
@@ -83,16 +90,16 @@ export default function Pricing() {
         body: JSON.stringify({ plan: planId }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create checkout session");
-      }
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || `Server error: ${response.status}`);
+      }
 
       if (data.sessionUrl) {
         window.location.href = data.sessionUrl;
       } else {
-        throw new Error("No checkout URL received");
+        throw new Error("No checkout URL received from server");
       }
     } catch (err) {
       console.error("Subscription error:", err);
@@ -104,6 +111,7 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen relative overflow-hidden text-white">
+      <SoftBackground />
 
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-16">
         <motion.div

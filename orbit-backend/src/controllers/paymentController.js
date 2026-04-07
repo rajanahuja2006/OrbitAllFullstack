@@ -3,13 +3,15 @@ import Payment from "../models/Payment.js";
 import Subscription from "../models/Subscription.js";
 import User from "../models/User.js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_dummy");
+// Always read key fresh so env var changes take effect without restart
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Plan definitions
+// Plan definitions (prices in USD cents)
 const PLANS = {
   basic: {
     name: "Basic",
-    price: 16900, // ₹169 in paise
+    price: 299,       // $2.99/month
+    displayPrice: "$2.99",
     resumeUploads: 5,
     features: [
       "5 Resume Uploads",
@@ -20,7 +22,8 @@ const PLANS = {
   },
   premium: {
     name: "Premium",
-    price: 49900, // ₹499 in paise
+    price: 999,       // $9.99/month
+    displayPrice: "$9.99",
     resumeUploads: 50,
     features: [
       "50 Resume Uploads",
@@ -32,7 +35,8 @@ const PLANS = {
   },
   pro: {
     name: "Pro",
-    price: 109900, // ₹1099 in paise
+    price: 1999,      // $19.99/month
+    displayPrice: "$19.99",
     resumeUploads: -1, // Unlimited
     features: [
       "Unlimited Resume Uploads",
@@ -64,25 +68,15 @@ export const createCheckoutSession = async (req, res) => {
 
     const planData = PLANS[plan];
 
-    // Mock Stripe for local development if no key is provided
-    if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === "sk_test_dummy") {
-      console.log("Mocking Stripe Checkout Session...");
-      const mockSessionId = "cs_test_" + Math.random().toString(36).substring(2, 15);
-      return res.json({
-        sessionId: mockSessionId,
-        sessionUrl: `/checkout?session_id=${mockSessionId}&plan=${plan}`,
-      });
-    }
-
     // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: user.email,
       client_reference_id: user._id.toString(),
       line_items: [
         {
           price_data: {
-            currency: "inr",
+            currency: "usd",
             product_data: {
               name: `Orbit AI - ${planData.name} Plan`,
               description: planData.features.join(", "),
@@ -93,8 +87,8 @@ export const createCheckoutSession = async (req, res) => {
         },
       ],
       mode: "payment",
-      success_url: `${process.env.FRONTEND_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
-      cancel_url: `${process.env.FRONTEND_URL}/payment-cancelled`,
+      success_url: `${process.env.FRONTEND_URL || "http://localhost:5173"}/payment-success?session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
+      cancel_url: `${process.env.FRONTEND_URL || "http://localhost:5173"}/payment-cancelled`,
       metadata: {
         userId: user._id.toString(),
         plan: plan,
@@ -121,14 +115,8 @@ export const handlePaymentSuccess = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Retrieve session from Stripe or use mock session
-    let session;
-    if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === "sk_test_dummy" || sessionId.startsWith("cs_test_")) {
-      console.log("Using mocked Stripe session verification...");
-      session = { payment_status: "paid", customer: "cus_test_dummy" };
-    } else {
-      session = await stripe.checkout.sessions.retrieve(sessionId);
-    }
+    // Retrieve session from Stripe
+    const session = await getStripe().checkout.sessions.retrieve(sessionId);
 
     if (session.payment_status !== "paid") {
       return res.status(400).json({ message: "Payment not completed" });
@@ -136,44 +124,48 @@ export const handlePaymentSuccess = async (req, res) => {
 
     const planData = PLANS[plan];
 
-    // Create or update payment record
-    await Payment.create({
-      user: user._id,
-      email: user.email,
-      stripeSessionId: sessionId,
-      amount: planData.price,
-      currency: "inr",
-      status: "completed",
-      plan: plan,
-      description: `${planData.name} Plan - ${planData.resumeUploads} uploads`,
-      metadata: {
-        features: planData.features.join(","),
-      },
-    });
-
-    // Create or update subscription
-    let subscription = await Subscription.findOne({ user: user._id });
-
-    if (!subscription) {
-      subscription = new Subscription({
+    // Upsert payment record (prevent duplicate key error on retry)
+    await Payment.findOneAndUpdate(
+      { stripeSessionId: sessionId },
+      {
         user: user._id,
         email: user.email,
-        stripeCustomerId: session.customer,
-      });
+        stripeSessionId: sessionId,
+        amount: planData.price,
+        currency: "usd",
+        status: "completed",
+        plan: plan,
+        description: `${planData.name} Plan - ${planData.resumeUploads} uploads`,
+        metadata: { features: planData.features.join(",") },
+      },
+      { upsert: true, new: true }
+    );
+
+    // Upsert subscription (keyed on user to avoid duplicates)
+    const subscriptionUpdate = {
+      user: user._id,
+      email: user.email,
+      plan: plan,
+      status: "active",
+      plan_details: {
+        name: planData.name,
+        price: planData.price,
+        resumeUploads: planData.resumeUploads,
+        features: planData.features,
+      },
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+    // Only set stripeCustomerId if not null (avoids unique index collision)
+    if (session.customer) {
+      subscriptionUpdate.stripeCustomerId = session.customer;
     }
 
-    subscription.plan = plan;
-    subscription.status = "active";
-    subscription.plan_details = {
-      name: planData.name,
-      price: planData.price,
-      resumeUploads: planData.resumeUploads,
-      features: planData.features,
-    };
-    subscription.currentPeriodStart = new Date();
-    subscription.currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
-    await subscription.save();
+    const subscription = await Subscription.findOneAndUpdate(
+      { user: user._id },
+      subscriptionUpdate,
+      { upsert: true, new: true }
+    );
 
     // Update user
     user.isPremium = true;
@@ -226,11 +218,6 @@ export const getSubscription = async (req, res) => {
 
 // Check if user can upload resume
 export const canUploadResume = async (userId) => {
-  // Bypass subscription for local development testing
-  if (process.env.NODE_ENV === "development") {
-    return { allowed: true, plan: "pro", uploadsRemaining: 999 };
-  }
-
   try {
     const user = await User.findById(userId).populate("subscription");
 

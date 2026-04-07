@@ -1,482 +1,309 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 import { API_CONFIG } from "../utils/api";
 
+const DEFAULT_JOBS = [
+  { title: "Backend Engineer", icon: "terminal", match: 94, desc: "Design and implement server-side logic for high-scale applications.", skills: ["Node.js", "PostgreSQL"], verified: ["Docker"], color: "text-primary bg-primary/10 border-primary/20", matchColor: "bg-secondary/10 text-secondary border-secondary/20" },
+  { title: "Cloud Architect", icon: "cloud_done", match: 88, desc: "Architecting resilient, scalable cloud infrastructure and pipelines.", skills: ["AWS Lambda", "Terraform"], verified: ["Kubernetes"], color: "text-secondary bg-secondary/10 border-secondary/20", matchColor: "bg-secondary text-primary-container", featured: true },
+  { title: "QA Automation", icon: "precision_manufacturing", match: 72, desc: "Build robust automated testing frameworks for enterprise product quality.", skills: ["Python", "Jenkins"], verified: ["Selenium"], color: "text-primary bg-primary/10 border-primary/20", matchColor: "bg-slate-800 text-slate-400 border-white/5" },
+  { title: "DevSecOps Lead", icon: "security", match: 45, desc: "Integrate advanced security protocols into high-frequency CI/CD pipelines.", skills: [], gap: ["Azure Security", "Penetration Testing"], color: "text-red-400 bg-red-500/10 border-red-500/20", matchColor: "bg-red-500/10 text-red-400 border-red-500/20" },
+  { title: "Full Stack Dev", icon: "layers", match: 91, desc: "Manage end-to-end development of feature-rich, user-centric web products.", skills: ["GraphQL"], verified: ["React.js", "Express"], color: "text-primary bg-primary/10 border-primary/20", matchColor: "bg-secondary/10 text-secondary border-secondary/20" },
+  { title: "AI Training Eng", icon: "neurology", match: 82, desc: "Optimization and fine-tuning of Large Language Models for production.", skills: ["PyTorch", "Fine-tuning"], verified: ["Python"], color: "text-primary bg-primary/10 border-primary/20", matchColor: "bg-secondary/10 text-secondary border-secondary/20", hot: true },
+];
+
 export default function Jobs() {
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [jobData, setJobData] = useState(null);
+  const [jobs, setJobs] = useState([]);
+  const [resumeData, setResumeData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [selectedJob, setSelectedJob] = useState(null);
-  const [filterCategory, setFilterCategory] = useState("all");
-  const [sortBy, setSortBy] = useState("match");
+  const [activeFilter, setActiveFilter] = useState("All Roles");
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+  const filters = ["All Roles", "Internship", "Entry-level", "Mid-senior", "FinTech", "EdTech", "Web3"];
 
-  const fetchJobs = async () => {
+  useEffect(() => { fetchData(); }, []);
+
+  const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(API_CONFIG.RESUME_JOBS, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(API_CONFIG.RESUME_MY_RESUMES, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setJobData(data);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.length > 0) {
+          setResumeData(data[0]);
+          // Use API jobs if available, otherwise default
+          const apiJobs = data[0].jobMatches || data[0].jobs || [];
+          setJobs(apiJobs.length > 0 ? apiJobs : DEFAULT_JOBS);
+        } else {
+          setJobs(DEFAULT_JOBS);
+        }
       } else {
-        setError("Failed to load job matches");
+        setJobs(DEFAULT_JOBS);
       }
-    } catch (error) {
-      console.error("Error fetching jobs:", error);
-      setError("Error loading jobs");
+    } catch {
+      setJobs(DEFAULT_JOBS);
     } finally {
       setLoading(false);
     }
   };
 
-  const getMatchColor = (percentage) => {
-    if (percentage >= 80) return { color: "text-green-400", bg: "bg-green-500/20", border: "border-green-500/50" };
-    if (percentage >= 60) return { color: "text-yellow-400", bg: "bg-yellow-500/20", border: "border-yellow-500/50" };
-    if (percentage >= 40) return { color: "text-orange-400", bg: "bg-orange-500/20", border: "border-orange-500/50" };
-    return { color: "text-red-400", bg: "bg-red-500/20", border: "border-red-500/50" };
-  };
-
-  const getDifficultyColor = (difficulty) => {
-    switch (difficulty) {
-      case "Beginner": return { bg: "bg-green-500/20", text: "text-green-400", border: "border-green-500/50" };
-      case "Intermediate": return { bg: "bg-yellow-500/20", text: "text-yellow-400", border: "border-yellow-500/50" };
-      case "Advanced": return { bg: "bg-red-500/20", text: "text-red-400", border: "border-red-500/50" };
-      default: return { bg: "bg-gray-500/20", text: "text-gray-400", border: "border-gray-500/50" };
-    }
-  };
-
-  const getSortedJobs = () => {
-    if (!jobData?.jobs) return [];
-    let sorted = [...jobData.jobs];
-    
-    if (sortBy === "match") {
-      sorted.sort((a, b) => b.skillMatchPercentage - a.skillMatchPercentage);
-    } else if (sortBy === "ats") {
-      sorted.sort((a, b) => b.minAtsScore - a.minAtsScore);
-    } else if (sortBy === "recent") {
-      sorted = sorted.reverse();
-    }
-    
-    return sorted;
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen relative text-white">
-        <div className="relative z-10 flex items-center justify-center h-screen">
-          <div className="text-center">
-            <motion.div
-              animate={{ scale: [1, 1.2, 1], rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="text-6xl mb-4"
-            >
-              💼
-            </motion.div>
-            <p className="text-2xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-              Finding perfect job matches for you...
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen relative text-white">
-        <div className="relative z-10 max-w-4xl mx-auto px-6 py-20">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <h1 className="text-5xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent mb-8">
-              Job Matches Not Available
-            </h1>
-            <div className="p-10 rounded-3xl bg-gradient-to-r from-red-500/20 to-orange-500/10 border border-red-500/30 backdrop-blur-md">
-              <p className="text-xl text-red-200 mb-8">{error}</p>
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="px-8 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold transition-all hover:scale-105"
-              >
-                📊 Go to Dashboard
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
-  const sortedJobs = getSortedJobs();
-  const matchColor = jobData ? getMatchColor(jobData.atsScore) : {};
+  // Normalize jobs from API or defaults
+  const normalizedJobs = jobs.map((j, i) => {
+    if (j.title && j.icon) return j; // already in Stitch format
+    const def = DEFAULT_JOBS[i % DEFAULT_JOBS.length];
+    return {
+      ...def,
+      title: j.title || j.role || def.title,
+      match: j.matchScore || j.match || def.match,
+      desc: j.description || j.desc || def.desc,
+    };
+  });
 
   return (
-    <div className="min-h-screen relative text-white">
-
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-20">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-16"
-        >
-          <h1 className="text-5xl font-black bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent mb-4">
-            Perfect Job Matches 💼
-          </h1>
-          <p className="text-xl text-gray-300">
-            Discover {jobData?.totalJobs || 0} opportunities tailored to your profile
-          </p>
-        </motion.div>
-
-        {/* Stats Banner */}
-        {jobData && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12"
-          >
-            <motion.div
-              whileHover={{ y: -5 }}
-              className="p-6 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-500/30 backdrop-blur-md"
-            >
-              <p className="text-blue-300 text-sm font-semibold">Total Matches</p>
-              <p className="text-3xl font-black text-blue-400 mt-2">{jobData.totalJobs}</p>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ y: -5 }}
-              className={`p-6 rounded-2xl bg-gradient-to-br ${getMatchColor(jobData.atsScore).bg} border ${getMatchColor(jobData.atsScore).border} backdrop-blur-md`}
-            >
-              <p className={`text-sm font-semibold ${getMatchColor(jobData.atsScore).color}`}>
-                Average Match
-              </p>
-              <p className={`text-3xl font-black mt-2 ${getMatchColor(jobData.atsScore).color}`}>
-                {jobData.atsScore}%
-              </p>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ y: -5 }}
-              className="p-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/30 backdrop-blur-md"
-            >
-              <p className="text-purple-300 text-sm font-semibold">Your ATS</p>
-              <p className="text-3xl font-black text-purple-400 mt-2">{jobData.atsScore}%</p>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ y: -5 }}
-              className="p-6 rounded-2xl bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-500/30 backdrop-blur-md"
-            >
-              <p className="text-orange-300 text-sm font-semibold">Skills Gap</p>
-              <p className="text-3xl font-black text-orange-400 mt-2">
-                {jobData.missingSkills?.length || 0}
-              </p>
-            </motion.div>
-          </motion.div>
-        )}
-
-        {/* Controls */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-10 flex flex-col md:flex-row gap-6 items-start md:items-center"
-        >
-          {/* Sort Dropdown */}
-          <div>
-            <label className="text-gray-400 font-semibold mb-2 block">Sort By:</label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2 rounded-xl bg-gray-800 border border-gray-700 text-white cursor-pointer hover:border-cyan-500 transition-all"
-            >
-              <option value="match">🎯 Best Match</option>
-              <option value="ats">📊 Highest ATS</option>
-              <option value="recent">⏰ Recently Added</option>
-            </select>
+    <div className="min-h-screen bg-background text-on-surface">
+      {/* Top nav bar */}
+      <header className="glass-nav sticky top-0 z-50">
+        <nav className="flex justify-between items-center w-full px-8 py-4 max-w-screen-2xl mx-auto">
+          <div className="flex items-center gap-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-indigo-400 flex items-center justify-center shadow-lg glow-accent">
+                <span className="material-symbols-outlined text-white text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
+              </div>
+              <span className="text-xl font-bold tracking-tight text-white font-headline">Orbit</span>
+            </div>
           </div>
+          <div className="flex items-center gap-4">
+            <button className="w-10 h-10 rounded-xl glass flex items-center justify-center text-slate-400 hover:text-white transition-all">
+              <span className="material-symbols-outlined text-xl">notifications</span>
+            </button>
+            <button className="w-10 h-10 rounded-xl glass flex items-center justify-center text-slate-400 hover:text-white transition-all">
+              <span className="material-symbols-outlined text-xl">settings</span>
+            </button>
+            <div className="w-10 h-10 rounded-xl bg-primary-container border border-white/10 flex items-center justify-center text-white font-bold">
+              {(user?.name || "O")[0].toUpperCase()}
+            </div>
+          </div>
+        </nav>
+      </header>
 
-          {/* Missing Skills */}
-          {jobData?.missingSkills && jobData.missingSkills.length > 0 && (
-            <div className="flex-1">
-              <p className="text-gray-400 font-semibold mb-2">Skills to Develop:</p>
-              <div className="flex flex-wrap gap-2">
-                {jobData.missingSkills.map((skill, idx) => (
-                  <motion.span
-                    key={idx}
-                    whileHover={{ scale: 1.05 }}
-                    className="px-3 py-1 rounded-full text-sm font-semibold bg-orange-500/20 border border-orange-500/50 text-orange-300"
-                  >
-                    {skill}
-                  </motion.span>
-                ))}
+      <div className="flex min-h-[calc(100vh-73px)]">
+        {/* Sidebar */}
+        <aside className="hidden md:flex fixed left-0 top-[73px] h-[calc(100vh-73px)] w-72 flex-col py-8 px-4 z-40"
+          style={{ background: "rgba(3,7,18,0.8)", backdropFilter: "blur(20px)", borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+          <div className="px-4 mb-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary border border-secondary/20">
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>explore</span>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-white font-headline">Navigator</p>
+                <p className="text-[9px] uppercase tracking-widest text-slate-500 font-black">BTech Career Engine</p>
               </div>
             </div>
-          )}
-        </motion.div>
+          </div>
+          <nav className="flex-1 space-y-2">
+            {[
+              { name: "Dashboard", path: "/dashboard", icon: "dashboard" },
+              { name: "Resume Analyzer", path: "/resume-analyzer", icon: "description" },
+              { name: "Roadmap", path: "/roadmap", icon: "map" },
+              { name: "Career Tutor", path: "/chat-tutor", icon: "psychology" },
+              { name: "Job Roles", path: "/jobs", icon: "work", active: true },
+            ].map((item) => (
+              <button key={item.path} onClick={() => navigate(item.path)}
+                className={`w-full px-6 py-4 flex items-center gap-4 text-sm font-semibold rounded-2xl transition-all hover:text-white text-left
+                  ${item.active ? "bg-primary/20 text-white border border-white/10 shadow-[0_0_20px_-5px_rgba(99,102,241,0.2)]" : "text-slate-400 hover:bg-white/5 hover:translate-x-2"}`}>
+                <span className="material-symbols-outlined" style={item.active ? { fontVariationSettings: "'FILL' 1" } : {}}>{item.icon}</span>
+                <span>{item.name}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="mt-auto">
+            <div className="bg-gradient-to-br from-indigo-900 to-slate-900 p-6 rounded-3xl relative overflow-hidden group border border-white/5">
+              <div className="relative z-10">
+                <p className="text-white font-bold text-sm mb-1">Upgrade Orbit</p>
+                <p className="text-slate-400 text-[11px] mb-4 font-medium">Unlock premium AI tutoring</p>
+                <button onClick={() => navigate("/pricing")}
+                  className="w-full bg-white text-primary py-3 rounded-xl text-xs font-black hover:scale-[1.02] transition-all">GET PREMIUM</button>
+              </div>
+              <div className="absolute -right-6 -bottom-6 opacity-10 group-hover:scale-125 transition-transform duration-700">
+                <span className="material-symbols-outlined text-8xl text-white">grade</span>
+              </div>
+            </div>
+          </div>
+        </aside>
 
-        {/* Jobs Grid */}
-        <motion.div
-          layout
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-16"
-        >
-          {sortedJobs.map((job, idx) => {
-            const matchInfo = getMatchColor(job.skillMatchPercentage);
-            
-            return (
-              <motion.div
-                key={job.id}
-                layout
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.05 }}
-                whileHover={{ scale: 1.03, y: -8 }}
-                onClick={() => setSelectedJob(job)}
-                className={`group p-8 rounded-3xl border ${matchInfo.border} bg-gradient-to-br from-gray-900/50 to-gray-950/50 backdrop-blur-md cursor-pointer transition-all overflow-hidden relative`}
-              >
-                {/* Glow Background */}
-                <div className={`absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity ${matchInfo.bg} blur-3xl`} />
-                
-                <div className="relative z-10">
-                  <div className="flex justify-between items-start mb-5">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${matchInfo.border} ${matchInfo.bg} ${matchInfo.color}`}>
-                          {job.skillMatchPercentage}% Match
-                        </span>
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-700 text-gray-300">
-                          {job.minAtsScore}+ ATS
-                        </span>
-                      </div>
-                      <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
-                        {job.title}
-                      </h3>
-                      <p className="text-cyan-400 font-semibold mb-1">{job.company}</p>
-                      <p className="text-gray-400 text-sm">📍 {job.location}</p>
-                    </div>
-                    <motion.div
-                      animate={{ scale: 1 }}
-                      whileHover={{ scale: 1.2, rotate: 10 }}
-                      className="text-4xl"
-                    >
-                      💡
-                    </motion.div>
-                  </div>
+        {/* Main */}
+        <main className="flex-1 md:ml-72 p-10">
+          <div className="max-w-[1400px] mx-auto">
+            {/* Header */}
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16 animate-fade-in-up">
+              <div className="max-w-2xl">
+                <span className="text-secondary font-black tracking-[0.4em] text-[10px] uppercase mb-4 block">PERSONALIZED PATHWAYS</span>
+                <h1 className="font-headline font-bold text-5xl text-white tracking-tighter leading-[1.1] mb-6">
+                  Job Role <br /><span className="text-primary">Recommendations</span>
+                </h1>
+                <p className="text-slate-400 text-lg leading-relaxed max-w-lg font-medium opacity-80">
+                  Based on your recent skill assessments and resume analysis, we've mapped out these high-growth roles where you're already leading the curve.
+                </p>
+              </div>
+              <div className="flex gap-4">
+                <button className="glass text-slate-300 px-6 py-3 rounded-2xl text-sm font-bold hover:text-white transition-all flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg">tune</span> Filter
+                </button>
+                <button onClick={fetchData} className="bg-primary text-white px-8 py-3 rounded-2xl text-sm font-black tracking-wide shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all uppercase">
+                  Refresh Profile
+                </button>
+              </div>
+            </header>
 
-                  <p className="text-gray-300 mb-6 line-clamp-2">{job.description}</p>
+            {/* Filter Pills */}
+            <div className="flex flex-wrap gap-3 mb-12 animate-fade-in-up animate-delay-100">
+              {filters.map((f) => (
+                <button key={f} onClick={() => setActiveFilter(f)}
+                  className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
+                    ${activeFilter === f ? "bg-primary text-white" : "glass text-slate-400 hover:text-white"}`}>
+                  {f}
+                </button>
+              ))}
+            </div>
 
-                  {/* Skills */}
-                  <div className="mb-6">
-                    <p className="text-gray-400 text-xs font-semibold mb-2">REQUIRED SKILLS</p>
-                    <div className="flex flex-wrap gap-2">
-                      {job.requiredSkills?.slice(0, 5).map((skill, idx) => (
-                        <motion.span
-                          key={idx}
-                          whileHover={{ scale: 1.05 }}
-                          className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/30 border border-purple-500/50 text-purple-300"
-                        >
-                          {skill}
-                        </motion.span>
-                      ))}
-                      {job.requiredSkills?.length > 5 && (
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-700 text-gray-300">
-                          +{job.requiredSkills.length - 5} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Apply Button */}
-                  <motion.a
-                    href={job.applyLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`block w-full py-3 rounded-xl font-bold text-center transition-all ${matchInfo.bg} border ${matchInfo.border} ${matchInfo.color} hover:opacity-80`}
-                  >
-                    Apply Now →
-                  </motion.a>
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-
-        {/* Job Details Modal */}
-        <AnimatePresence>
-          {selectedJob && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setSelectedJob(null)}
-                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40"
-              />
-
-              {/* Modal */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="fixed inset-0 flex items-center justify-center z-50 p-4"
-              >
-                <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl bg-gradient-to-br from-gray-900 via-gray-950 to-black border border-cyan-500/30 backdrop-blur-xl">
-                  <div className="p-10">
-                    {/* Header */}
+            {/* Job Cards Grid */}
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {normalizedJobs.map((job, i) => (
+                  <div key={i}
+                    className={`animate-fade-in-up glass-card p-10 rounded-3xl flex flex-col group transition-all duration-500 hover:-translate-y-2
+                      ${job.featured ? "border-2 border-secondary/20 hover:shadow-[0_0_40px_-15px_rgba(16,185,129,0.3)]" : "hover:border-primary/30"}`}
+                    style={{ animationDelay: `${i * 100}ms` }}>
                     <div className="flex justify-between items-start mb-8">
-                      <div>
-                        <h2 className="text-4xl font-black text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text mb-2">
-                          {selectedJob.title}
-                        </h2>
-                        <p className="text-2xl text-cyan-400 font-bold">{selectedJob.company}</p>
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${job.color} group-hover:scale-110 transition-transform duration-500`}>
+                        <span className="material-symbols-outlined text-3xl">{job.icon}</span>
                       </div>
-                      <motion.button
-                        whileHover={{ scale: 1.2, rotate: 90 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setSelectedJob(null)}
-                        className="text-4xl text-gray-400 hover:text-white transition-colors"
-                      >
-                        ✕
-                      </motion.button>
+                      <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-1.5 ${job.matchColor}`}>
+                        {job.featured && <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>}
+                        {job.match}% Match
+                      </div>
                     </div>
 
-                    {/* Quick Stats */}
-                    <div className="grid grid-cols-3 gap-4 mb-10">
-                      {[
-                        { label: "Match %", value: selectedJob.skillMatchPercentage + "%", color: "green" },
-                        { label: "Min ATS", value: selectedJob.minAtsScore + "%", color: "blue" },
-                        { label: "Location", value: selectedJob.location, color: "purple" }
-                      ].map((stat, idx) => (
-                        <div key={idx} className={`p-4 rounded-xl bg-opacity-20 border border-opacity-30 ${
-                          stat.color === "green" ? "bg-green-500 border-green-500" :
-                          stat.color === "blue" ? "bg-blue-500 border-blue-500" :
-                          "bg-purple-500 border-purple-500"
-                        }`}>
-                          <p className="text-gray-400 text-xs font-semibold">{stat.label}</p>
-                          <p className="text-white font-bold mt-1">{stat.value}</p>
-                        </div>
-                      ))}
-                    </div>
+                    <h3 className="font-headline font-bold text-2xl text-white mb-3">{job.title}</h3>
+                    <p className="text-sm text-slate-400 mb-10 leading-relaxed font-medium">{job.desc}</p>
 
-                    {/* Description */}
-                    <div className="mb-10">
-                      <h3 className="text-xl font-bold text-cyan-400 mb-4">About This Role</h3>
-                      <p className="text-gray-300 leading-relaxed">{selectedJob.description}</p>
-                    </div>
-
-                    {/* Skills */}
-                    <div className="mb-10">
-                      <h3 className="text-xl font-bold text-cyan-400 mb-4">Required Skills</h3>
-                      <div className="flex flex-wrap gap-3">
-                        {selectedJob.requiredSkills?.map((skill, idx) => (
-                          <motion.span
-                            key={idx}
-                            whileHover={{ scale: 1.1 }}
-                            className="px-4 py-2 rounded-full font-semibold bg-purple-500/30 border border-purple-500/50 text-purple-300"
-                          >
-                            {skill}
-                          </motion.span>
+                    <div className="space-y-4 mb-10">
+                      <p className="text-[9px] uppercase tracking-[0.2em] font-black text-slate-500">
+                        {job.gap ? "SKILL GAP ANALYSIS" : "KEY SKILLS NEEDED"}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {job.verified?.map((s) => (
+                          <span key={s} className="bg-secondary/10 border border-secondary/20 px-4 py-1.5 rounded-xl text-[10px] font-black text-secondary flex items-center gap-1.5 uppercase">
+                            <span className="material-symbols-outlined text-[14px]">verified</span>{s}
+                          </span>
+                        ))}
+                        {job.skills?.map((s) => (
+                          <span key={s} className="bg-white/5 border border-white/5 px-4 py-1.5 rounded-xl text-[10px] font-bold text-slate-300">{s}</span>
+                        ))}
+                        {job.gap?.map((s) => (
+                          <span key={s} className="bg-red-500/10 border border-red-500/20 px-4 py-1.5 rounded-xl text-[10px] font-black text-red-400 flex items-center gap-1.5 uppercase">
+                            <span className="material-symbols-outlined text-[14px]">error</span>{s}
+                          </span>
                         ))}
                       </div>
                     </div>
 
-                    {/* Roadmap if Available */}
-                    {selectedJob.skillRoadmap && selectedJob.skillRoadmap.length > 0 && (
-                      <div className="mb-10">
-                        <h3 className="text-xl font-bold text-cyan-400 mb-4">Learning Path</h3>
-                        <div className="space-y-3">
-                          {selectedJob.skillRoadmap.map((step, idx) => (
-                            <div
-                              key={idx}
-                              className={`p-4 rounded-xl border ${
-                                step.status === "completed" ? "bg-green-500/10 border-green-500/30" :
-                                step.status === "current" ? "bg-blue-500/10 border-blue-500/30" :
-                                "bg-gray-800/50 border-gray-700/30"
-                              }`}
-                            >
-                              <div className="flex items-start gap-3">
-                                <span className="text-xl">
-                                  {step.status === "completed" ? "✅" : step.status === "current" ? "🎯" : "🔒"}
-                                </span>
-                                <div className="flex-1">
-                                  <p className="font-bold text-white">{step.title}</p>
-                                  <p className="text-sm text-gray-400">{step.estimatedTime}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <div className="mt-auto pt-8 border-t border-white/5 flex items-center justify-between">
+                      {job.hot && <span className="text-[10px] font-black text-secondary uppercase tracking-[0.3em]">Hot Trend</span>}
+                      {job.featured && <span className="text-[10px] font-black text-secondary uppercase tracking-widest">6 New Jobs Found</span>}
+                      {job.gap && <span className="text-[10px] text-red-400 font-black uppercase tracking-widest italic">GAP IDENTIFIED</span>}
+                      {!job.hot && !job.featured && !job.gap && <div />}
+                      <button onClick={() => navigate("/roadmap")}
+                        className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
+                          ${job.gap ? "bg-red-500/20 text-white hover:bg-red-500 border border-red-500/30"
+                          : job.featured ? "bg-white text-primary hover:scale-105"
+                          : "bg-primary/20 text-white hover:bg-primary border border-primary/30"}`}>
+                        {job.gap ? "Start Prep" : job.featured ? "Learn More" : "View Roadmap"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-                    {/* CTA Buttons */}
-                    <div className="flex flex-wrap gap-4 mt-8">
-                      <motion.a
-                        href={selectedJob.applyLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="flex-1 min-w-[200px] py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold transition-all text-center shadow-lg shadow-cyan-500/30"
-                      >
-                        🏢 Official Apply Link
-                      </motion.a>
-                      <motion.a
-                        href={`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(selectedJob.title)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="flex-1 min-w-[200px] py-4 rounded-xl bg-[#0a66c2] hover:bg-[#004182] text-white font-bold transition-all text-center shadow-lg shadow-blue-500/20"
-                      >
-                        💼 LinkedIn Jobs
-                      </motion.a>
-                      <motion.a
-                        href={`https://www.indeed.com/jobs?q=${encodeURIComponent(selectedJob.title)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="flex-1 min-w-[200px] py-4 rounded-xl bg-[#003A9B] hover:bg-[#00225A] text-white font-bold transition-all text-center shadow-lg"
-                      >
-                        🔍 Search Indeed
-                      </motion.a>
-                      <motion.a
-                        href={`https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodeURIComponent(selectedJob.title)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="flex-1 min-w-[200px] py-4 rounded-xl bg-[#0CAA41] hover:bg-[#0A8A34] text-white font-bold transition-all text-center shadow-lg"
-                      >
-                        🌟 Glassdoor
-                      </motion.a>
-                      <motion.button
-                        onClick={() => setSelectedJob(null)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="w-full py-4 mt-2 rounded-xl bg-gray-800 hover:bg-red-500/20 hover:text-red-400 border border-transparent hover:border-red-500/50 text-gray-300 font-bold transition-all"
-                      >
-                        Close Modal
-                      </motion.button>
+            {/* Career Trajectory section */}
+            {resumeData && (
+              <section className="mt-20 glass p-12 rounded-[3rem] relative overflow-hidden animate-fade-in-up animate-delay-500">
+                <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                  <div>
+                    <h2 className="font-headline font-bold text-4xl text-white mb-6">
+                      Your Career <br /><span className="text-primary">Trajectory</span>
+                    </h2>
+                    <p className="text-slate-400 text-lg mb-10 opacity-90 leading-relaxed font-medium">
+                      {resumeData.skills?.length
+                        ? `You have ${resumeData.skills.length} verified skills. Focus on cloud and system design to reach the next tier.`
+                        : "You are currently in the top 5% of applicants. Focus on Distributed Systems to reach the next tier."}
+                    </p>
+                    <div className="w-full">
+                      <div className="flex justify-between mb-3">
+                        <span className="text-[9px] font-black text-white uppercase tracking-[0.3em]">INDUSTRY READINESS</span>
+                        <span className="text-[10px] font-black text-secondary">{resumeData.atsScore || 88}%</span>
+                      </div>
+                      <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-primary to-secondary rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)]"
+                          style={{ width: `${resumeData.atsScore || 88}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                  {/* Market demand mini chart */}
+                  <div className="bg-white/5 backdrop-blur-xl rounded-[2.5rem] p-10 border border-white/10 shadow-2xl">
+                    <h4 className="text-white font-bold text-base mb-8 flex items-center gap-3">
+                      <span className="material-symbols-outlined text-secondary">trending_up</span>
+                      Market Demand Index
+                    </h4>
+                    <div className="flex items-end gap-3 h-40">
+                      {[60, 45, 80, 30, 95, 55, 90].map((h, i) => (
+                        <div key={i} className={`w-full rounded-xl transition-all hover:opacity-80`}
+                          style={{
+                            height: `${h}%`,
+                            background: h === 95 || h === 90 ? "rgba(16,185,129,1)" : `rgba(16,185,129,${h / 150})`,
+                            boxShadow: (h === 95 || h === 90) ? "0 0 20px rgba(16,185,129,0.3)" : "none"
+                          }} />
+                      ))}
+                    </div>
+                    <div className="flex justify-between mt-6 text-[9px] text-slate-500 font-black uppercase tracking-widest">
+                      {["Jan", "Mar", "May", "Jul", "Sep", "Nov", "Dec"].map((m) => <span key={m}>{m}</span>)}
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+                <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/20 rounded-full blur-[100px]" />
+                <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-secondary/10 rounded-full blur-[100px]" />
+              </section>
+            )}
+          </div>
+        </main>
       </div>
+
+      {/* Footer */}
+      <footer className="mt-32 w-full max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 border-t border-white/5 py-16 animate-fade-in-up px-10">
+        <div className="flex flex-col items-center md:items-start gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-indigo-400 flex items-center justify-center shadow-lg">
+              <span className="material-symbols-outlined text-white text-base" style={{ fontVariationSettings: "'FILL' 1" }}>rocket_launch</span>
+            </div>
+            <span className="text-xl font-bold text-white font-headline tracking-tight">Orbit Engine</span>
+          </div>
+          <p className="text-[10px] font-medium tracking-wider text-slate-600 uppercase">© 2024 CELESTIAL CAREER ENGINE</p>
+        </div>
+        <div className="flex gap-10">
+          {["Operations", "Support", "Privacy Policy", "Protocol"].map((l) => (
+            <span key={l} className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-white transition-colors cursor-pointer">{l}</span>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }

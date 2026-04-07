@@ -1,10 +1,7 @@
 import { useState, useEffect, useContext, useRef } from "react";
-import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { API_CONFIG, getApiBase } from "../utils/api";
-import MorphingCard from "../components/MorphingCard";
-import InteractiveButton from "../components/InteractiveButton";
 
 export default function Dashboard() {
   const { user } = useContext(AuthContext);
@@ -14,9 +11,7 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadMessage, setUploadMessage] = useState("");
-  const [hoveredCard, setHoveredCard] = useState(null);
   const [subscription, setSubscription] = useState(null);
-  const [uploadError, setUploadError] = useState(null);
 
   useEffect(() => {
     fetchResumeData();
@@ -26,129 +21,66 @@ export default function Dashboard() {
   const fetchSubscription = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${getApiBase()}/api/payment/subscription`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(`${getApiBase()}/api/payment/subscription`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSubscription(data);
-      }
-    } catch (error) {
-      console.error("Error fetching subscription:", error);
-    }
-  };
-
-  const formatDate = (value) => {
-    if (!value) return "—";
-    const date = new Date(value);
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+      if (res.ok) setSubscription(await res.json());
+    } catch (e) { console.error(e); }
   };
 
   const fetchResumeData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(API_CONFIG.RESUME_MY_RESUMES, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(API_CONFIG.RESUME_MY_RESUMES, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.length > 0) {
-          setResumeData(data[0]);
-        }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.length > 0) setResumeData(data[0]);
       }
-    } catch (error) {
-      console.error("Error fetching resume data:", error);
-    }
+    } catch (e) { console.error(e); }
   };
 
-  const handleUploadClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileUpload = async (event) => {
-    const file = event.target.files?.[0];
-    
-    if (!file) {
-      setUploadMessage("");
-      return;
-    }
-
-    // Validation
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     if (!file.type.includes("pdf") && !file.name.endsWith(".pdf")) {
       setUploadMessage("❌ Please upload a PDF file only");
       setTimeout(() => setUploadMessage(""), 5000);
       return;
     }
-
     if (file.size > 10 * 1024 * 1024) {
       setUploadMessage("❌ File size must be less than 10MB");
       setTimeout(() => setUploadMessage(""), 5000);
       return;
     }
-
     setUploading(true);
     setUploadProgress(10);
-    setUploadMessage("📤 Uploading your resume...");
-    
+    setUploadMessage("Uploading resume...");
     const formData = new FormData();
     formData.append("resume", file);
-
     try {
       const token = localStorage.getItem("token");
-      
-      if (!token) {
-        setUploadMessage("❌ Please login again");
-        setTimeout(() => setUploadMessage(""), 5000);
-        setUploading(false);
-        return;
-      }
-
       setUploadProgress(30);
-      console.log("Uploading resume:", file.name);
-      
-      const response = await fetch(API_CONFIG.RESUME_UPLOAD, {
+      const res = await fetch(API_CONFIG.RESUME_UPLOAD, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-
       setUploadProgress(70);
-      const data = await response.json();
-      
-      if (response.ok) {
+      const data = await res.json();
+      if (res.ok) {
         setUploadProgress(100);
         setResumeData(data);
-        setUploadMessage(`✅ Resume analyzed! ATS: ${data.atsScore}% | Skills: ${data.skills?.length || 0}`);
-        
-        setTimeout(() => {
-          setUploadMessage("");
-          setUploadProgress(0);
-        }, 3000);
-        
-        // Reset file input
-        event.target.value = "";
+        setUploadMessage(`✅ ATS: ${data.atsScore}% | Skills: ${data.skills?.length || 0}`);
+        setTimeout(() => { setUploadMessage(""); setUploadProgress(0); }, 3000);
+        e.target.value = "";
       } else {
-        console.error("Upload failed:", data);
         setUploadMessage(`❌ ${data.message || "Upload failed"}`);
         setTimeout(() => setUploadMessage(""), 5000);
       }
-    } catch (error) {
-      console.error("Upload error:", error);
-      setUploadMessage(`❌ ${error.message || "Connection error"}`);
+    } catch (err) {
+      setUploadMessage(`❌ ${err.message || "Connection error"}`);
       setTimeout(() => setUploadMessage(""), 5000);
     } finally {
       setUploading(false);
@@ -156,373 +88,299 @@ export default function Dashboard() {
     }
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.6, type: "spring" },
-    },
-  };
+  const atsScore = resumeData?.atsScore ?? 0;
+  const roadmapPct = resumeData?.roadmapProgress ?? 0;
 
   return (
-    <div className="min-h-screen relative text-white">
+    <div className="min-h-screen p-10 max-w-[1600px]">
+      {/* Hidden file input */}
+      <input ref={fileInputRef} type="file" accept=".pdf" onChange={handleFileUpload} className="hidden" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
-
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-16"
-        >
-          <h1 className="text-6xl font-black mb-4 welcome-text">
-            Welcome Back, {user?.name || "Navigator"} 🌟
-          </h1>
-          <p className="text-xl text-gray-300 font-light">
-            Your AI-powered career companion is ready to guide you forward
+      {/* Header */}
+      <header className="flex justify-between items-center mb-12 animate-fade-in-up">
+        <div>
+          <h2 className="text-4xl font-headline font-bold text-white tracking-tighter">
+            System Ready, <span className="text-primary">{user?.name || "Navigator"}</span>
+          </h2>
+          <p className="text-slate-400 font-medium mt-1">
+            {resumeData
+              ? `ATS resonance at ${atsScore}% — keep pushing the signal.`
+              : "Upload your resume to begin career telemetry."}
           </p>
-        </motion.div>
-
-        {/* Hidden File Input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-
-        {/* Stats Cards */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16"
-        >
-          <MorphingCard
-            icon="📊"
-            title="ATS Score"
-            value={resumeData?.atsScore ? `${resumeData.atsScore}%` : "0%"}
-            gradient={["#667eea", "#764ba2", "#f093fb", "#4facfe"]}
-            delay={0}
-          />
-          <MorphingCard
-            icon="🎯"
-            title="Roadmap Progress"
-            value={resumeData?.roadmapProgress ? `${resumeData.roadmapProgress}%` : "0%"}
-            gradient={["#f093fb", "#f5576c", "#4facfe", "#00f2fe"]}
-            delay={0.1}
-          />
-          <MorphingCard
-            icon="💼"
-            title="Jobs Matched"
-            value={resumeData?.jobsMatched || 0}
-            gradient={["#4facfe", "#00f2fe", "#667eea", "#764ba2"]}
-            delay={0.2}
-          />
-        </motion.div>
-
-        {subscription && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass p-10 rounded-3xl mb-16 shadow-soft"
-          >
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <p className="text-sm text-gray-300 uppercase tracking-wide">Subscription</p>
-                <h2 className="text-3xl font-bold text-white">
-                  {subscription.subscription?.plan?.toUpperCase() || "Free"}
-                </h2>
-                <p className="text-sm text-gray-400">
-                  {subscription.subscription?.status
-                    ? subscription.subscription.status.charAt(0).toUpperCase() + subscription.subscription.status.slice(1)
-                    : "Inactive"}
-                </p>
-              </div>
-
-              <div className="text-right">
-                <p className="text-sm text-gray-300">Uploads Remaining</p>
-                <p className="text-3xl font-bold text-white">
-                  {typeof subscription.resumeUploadsRemaining === "number"
-                    ? subscription.resumeUploadsRemaining
-                    : "—"}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <p className="text-xs text-gray-300 uppercase tracking-wide">Plan Features</p>
-                <ul className="mt-3 space-y-2 text-sm text-gray-200">
-                  {subscription.subscription?.plan_details?.features?.slice(0, 4).map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-emerald-300">✓</span>
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <p className="text-xs text-gray-300 uppercase tracking-wide">Renewal Date</p>
-                <p className="mt-2 text-lg font-semibold text-white">
-                  {formatDate(subscription.subscription?.currentPeriodEnd)}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-                <p className="text-xs text-gray-300 uppercase tracking-wide">Next Step</p>
-                <p className="mt-2 text-sm text-gray-200">
-                  {subscription.isPremium
-                    ? "Change your plan or manage uploads in the subscription portal."
-                    : "Subscribe to unlock uploads and advanced features."}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-8 flex flex-col md:flex-row gap-4">
-              <button
-                onClick={() => navigate("/subscription")}
-                className="btn-primary w-full md:w-auto"
-              >
-                Manage Subscription
-              </button>
-              <button
-                onClick={() => navigate("/pricing")}
-                className="btn-secondary w-full md:w-auto"
-              >
-                View Plans
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Upload Section */}
-        {!resumeData && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass p-12 rounded-3xl mb-16 shadow-soft"
-          >
-            <div className="text-center">
-              <motion.div
-                animate={uploading ? { scale: 1.1 } : { scale: 1 }}
-                className="text-6xl mb-6"
-              >
-                📄
-              </motion.div>
-              <h2 className="text-4xl font-bold text-white mb-4">
-                Upload Your Resume
-              </h2>
-              <p className="text-gray-300 mb-8 text-lg">
-                Let our AI analyze your resume and provide personalized career insights
+        </div>
+        <div className="flex items-center gap-4">
+          <button className="w-12 h-12 rounded-2xl glass flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-all border border-white/5">
+            <span className="material-symbols-outlined">notifications</span>
+          </button>
+          <div className="flex items-center gap-4 pl-6 border-l border-white/10">
+            <div className="text-right">
+              <p className="text-sm font-bold text-white">{user?.name || "Operator"}</p>
+              <p className="text-[9px] text-secondary font-black uppercase tracking-widest">
+                {subscription?.isPremium ? "Pro · Orbit" : "Free · Orbit"}
               </p>
-
-              {/* Upload Button */}
-              <button
-                onClick={handleUploadClick}
-                disabled={uploading}
-                className={`
-                  relative inline-block px-10 py-4 rounded-2xl font-bold text-lg
-                  transition-all duration-300 transform
-                  ${uploading ? "opacity-50 cursor-not-allowed" : "hover:scale-105 cursor-pointer"}
-                  bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-600
-                  hover:from-cyan-400 hover:via-blue-400 hover:to-purple-500
-                  text-white shadow-lg hover:shadow-2xl
-                  border border-cyan-400 hover:border-cyan-300
-                `}
-              >
-                <motion.span
-                  animate={uploading ? { opacity: [1, 0.5, 1] } : {}}
-                  transition={{ duration: 1.5, repeat: uploading ? Infinity : 0 }}
-                >
-                  {uploading ? `⏳ Uploading... ${uploadProgress}%` : "📤 Upload PDF Resume"}
-                </motion.span>
-              </button>
-
-              {/* Progress Bar */}
-              {uploading && uploadProgress > 0 && (
-                <motion.div className="mt-6">
-                  <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${uploadProgress}%` }}
-                      className="h-full bg-gradient-to-r from-cyan-500 to-blue-500"
-                      transition={{ duration: 0.3 }}
-                    />
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Upload Message */}
-              {uploadMessage && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-6 p-4 rounded-xl bg-opacity-20 bg-blue-500"
-                >
-                  <p className="text-white font-semibold">{uploadMessage}</p>
-                </motion.div>
-              )}
-
-              {/* File Type Info */}
-              <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-lg bg-opacity-10 bg-cyan-500">
-                  <p className="text-sm text-cyan-300">📋 PDF Format</p>
-                  <p className="text-xs text-gray-400">Works best with PDF</p>
-                </div>
-                <div className="p-4 rounded-lg bg-opacity-10 bg-blue-500">
-                  <p className="text-sm text-blue-300">📊 Max 10MB</p>
-                  <p className="text-xs text-gray-400">Keep file size optimal</p>
-                </div>
-                <div className="p-4 rounded-lg bg-opacity-10 bg-purple-500">
-                  <p className="text-sm text-purple-300">⚡ AI Analysis</p>
-                  <p className="text-xs text-gray-400">Instant skill detection</p>
-                </div>
-              </div>
             </div>
-          </motion.div>
-        )}
-
-        {/* After Upload - Analysis Section */}
-        {resumeData && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="glass p-10 rounded-3xl mb-16 shadow-soft"
-          >
-            <h2 className="text-3xl font-bold text-white mb-6">✨ Resume Analysis Complete</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="p-6 rounded-xl bg-opacity-10 bg-green-500">
-                <p className="text-green-300 text-sm font-semibold">TOP SKILLS DETECTED</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {resumeData.skills?.slice(0, 5).map((skill, idx) => (
-                    <span key={idx} className="px-3 py-1 rounded-full bg-green-500 bg-opacity-20 text-green-300 text-sm">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="p-6 rounded-xl bg-opacity-10 bg-blue-500">
-                <p className="text-blue-300 text-sm font-semibold">KEY RECOMMENDATIONS</p>
-                <ul className="mt-4 space-y-2">
-                  {resumeData.suggestions?.slice(0, 3).map((suggestion, idx) => (
-                    <li key={idx} className="text-sm text-gray-300 flex items-start">
-                      <span className="text-blue-400 mr-2">→</span>
-                      {suggestion}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div className="w-12 h-12 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center text-white font-bold text-lg">
+              {(user?.name || "O")[0].toUpperCase()}
             </div>
+          </div>
+        </div>
+      </header>
 
-            <button
-              onClick={() => navigate("/resume-analyzer")}
-              className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-cyan-500 hover:from-green-400 hover:to-cyan-400 text-white font-bold transition-all"
-            >
-              📈 View Detailed Analysis
-            </button>
-          </motion.div>
-        )}
+      {/* Bento Grid */}
+      <div className="grid grid-cols-12 gap-8">
 
-        {/* Next Steps Section */}
-        <motion.div
-          variants={itemVariants}
-          initial="hidden"
-          whileInView="visible"
-          className="glass p-10 rounded-3xl mb-16 shadow-soft"
-        >
-          <h2 className="text-3xl font-bold text-white mb-8">🚀 Explore Your Career Path</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <QuickActionCard
-              icon="🛣️"
-              title="Roadmap"
-              subtitle="Build your growth path"
-              onClick={() => navigate("/roadmap")}
-              delay={0}
-            />
-            <QuickActionCard
-              icon="💬"
-              title="Chat Tutor"
-              subtitle="AI career guidance"
-              onClick={() => navigate("/chat-tutor")}
-              delay={0.1}
-            />
-            <QuickActionCard
-              icon="💼"
-              title="Job Matches"
-              subtitle="Find perfect roles"
-              onClick={() => navigate("/jobs")}
-              delay={0.2}
-            />
-            <QuickActionCard
-              icon="📊"
-              title="Resume Tips"
-              subtitle="Optimize your resume"
-              onClick={() => navigate("/resume-analyzer")}
-              delay={0.3}
+        {/* ATS Score Card */}
+        <div className="col-span-12 lg:col-span-4 glass p-10 rounded-[3rem] relative overflow-hidden flex flex-col justify-between animate-fade-in-up animate-delay-100">
+          <div>
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-bold text-white font-headline">Signal Strength</h3>
+              <span className="material-symbols-outlined text-primary">sensors</span>
+            </div>
+            <p className="text-xs text-slate-400 mb-8 font-medium">ATS Resume resonance frequency</p>
+          </div>
+          <div className="flex items-end justify-between mb-4">
+            <span className="text-7xl font-bold font-headline text-white tracking-tighter">
+              {atsScore}<span className="text-3xl text-secondary ml-1">%</span>
+            </span>
+            <span className="text-[10px] font-black text-secondary bg-secondary/10 px-4 py-1.5 rounded-full mb-3 border border-secondary/20">
+              {atsScore >= 80 ? "ELITE TIER" : atsScore >= 60 ? "STRONG" : "BUILDING"}
+            </span>
+          </div>
+          <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary to-secondary rounded-full shadow-[0_0_20px_rgba(99,102,241,0.5)] transition-all duration-1000"
+              style={{ width: `${atsScore}%` }}
             />
           </div>
-        </motion.div>
-      </div>
-    </div>
-  );
-}
+          {resumeData?.suggestions?.[0] && (
+            <p className="mt-6 text-sm text-slate-400 leading-relaxed font-light italic">
+              "{resumeData.suggestions[0]}"
+            </p>
+          )}
+          {!resumeData && (
+            <p className="mt-6 text-sm text-slate-400 italic">Upload your resume to see your signal strength.</p>
+          )}
+        </div>
 
-function QuickActionCard({ icon, title, subtitle, onClick, delay }) {
-  return (
-    <motion.button
-      variants={{
-        hidden: { opacity: 0, scale: 0.8 },
-        visible: {
-          opacity: 1,
-          scale: 1,
-          transition: { delay, duration: 0.5, type: "spring" },
-        },
-      }}
-      initial="hidden"
-      whileInView="visible"
-      whileHover={{ scale: 1.08, y: -8 }}
-      whileTap={{ scale: 0.92 }}
-      onClick={onClick}
-      className="relative p-8 rounded-2xl glass group overflow-hidden"
-    >
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 opacity-0 group-hover:opacity-30 transition-all duration-300" />
-      <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-cyan-400 transition-all duration-300" />
-      
-      <div className="relative text-center">
-        <motion.div 
-          className="text-5xl mb-3 block"
-          whileHover={{ scale: 1.2, rotate: 5 }}
-        >
-          {icon}
-        </motion.div>
-        <p className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors">
-          {title}
-        </p>
-        {subtitle && (
-          <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors mt-2">
-            {subtitle}
-          </p>
+        {/* Target Role / Upload Hero */}
+        <div className="col-span-12 lg:col-span-8 bg-gradient-to-br from-indigo-600 via-primary to-indigo-900 rounded-[3rem] p-10 text-white relative overflow-hidden shadow-2xl animate-fade-in-up animate-delay-200">
+          <div className="relative z-10 h-full flex flex-col">
+            <div className="flex justify-between items-start mb-10">
+              <div>
+                <span className="text-[10px] font-black text-white/60 uppercase tracking-[0.4em] mb-3 block">
+                  {resumeData ? "TOP SKILL DETECTED" : "YOUR MISSION"}
+                </span>
+                <h3 className="text-4xl font-bold font-headline leading-tight">
+                  {resumeData
+                    ? (resumeData.skills?.[0] || "Resume Analyzed")
+                    : "Upload Your Resume"}
+                </h3>
+              </div>
+              <div className="bg-white/10 backdrop-blur-xl border border-white/20 px-6 py-2.5 rounded-2xl text-xs font-bold tracking-widest">
+                {resumeData ? `${resumeData.skills?.length || 0} SKILLS` : "GET STARTED"}
+              </div>
+            </div>
+
+            {resumeData ? (
+              <div className="flex flex-wrap gap-3 mb-10">
+                {resumeData.skills?.slice(0, 5).map((skill, i) => (
+                  <span key={i} className="px-5 py-2 bg-black/20 rounded-xl text-xs font-semibold border border-white/10 backdrop-blur-sm hover:bg-black/30 transition-colors">
+                    {skill}
+                  </span>
+                ))}
+                {(resumeData.skills?.length || 0) > 5 && (
+                  <span className="px-5 py-2 bg-secondary text-primary-container rounded-xl text-xs font-bold shadow-lg">
+                    +{resumeData.skills.length - 5} MORE
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-3 mb-10">
+                {["ATS Analysis", "Skill Detection", "Job Matching", "AI Roadmap"].map((t) => (
+                  <span key={t} className="px-5 py-2 bg-black/20 rounded-xl text-xs font-semibold border border-white/10">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-auto flex items-center justify-between">
+              {uploadMessage ? (
+                <p className="text-sm font-semibold">{uploadMessage}</p>
+              ) : (
+                <p className="text-xs text-indigo-100 font-medium">
+                  {resumeData ? "Your career data is live." : "PDF only · Max 10MB · Instant AI analysis"}
+                </p>
+              )}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="bg-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50"
+                style={{ color: '#3730a3' }}
+              >
+                {uploading ? `${uploadProgress}%...` : resumeData ? "Re-Analyze" : "Upload PDF"}
+              </button>
+            </div>
+            {uploading && (
+              <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mt-4">
+                <div className="h-full bg-white rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+              </div>
+            )}
+          </div>
+          <div className="absolute -right-20 -top-20 w-96 h-96 bg-secondary/20 rounded-full blur-[100px]" />
+          <div className="absolute -left-10 -bottom-10 w-64 h-64 bg-white/5 rounded-full blur-[80px]" />
+        </div>
+
+        {/* Roadmap Progress */}
+        <div className="col-span-12 glass p-10 rounded-[3rem] animate-fade-in-up animate-delay-300">
+          <div className="flex items-center justify-between mb-12">
+            <div>
+              <h3 className="text-2xl font-bold text-white font-headline">Course Correction</h3>
+              <p className="text-sm text-slate-400 font-medium mt-1">Your career roadmap synchronization</p>
+            </div>
+            <div className="flex items-end flex-col">
+              <span className="text-4xl font-headline font-bold text-secondary">{roadmapPct}%</span>
+              <span className="text-[10px] uppercase font-black tracking-widest text-slate-500">Synchronization</span>
+            </div>
+          </div>
+          <div className="relative py-8">
+            <div className="absolute top-1/2 left-0 w-full h-[1px] bg-white/10 -translate-y-1/2" />
+            <div
+              className="absolute top-1/2 left-0 h-[3px] bg-gradient-to-r from-primary to-secondary -translate-y-1/2 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.5)] transition-all duration-1000"
+              style={{ width: `${roadmapPct}%` }}
+            />
+            <div className="relative flex justify-between">
+              {["Foundations", "Artifacts", "Optimization", "Engagement", "Deployment"].map((step, i) => {
+                const pct = (i / 4) * 100;
+                const done = roadmapPct > pct;
+                const active = !done && roadmapPct >= (i == 0 ? 0 : ((i - 1) / 4) * 100);
+                return (
+                  <div key={step} className="flex flex-col items-center gap-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center z-10 border border-white/20
+                      ${done ? "bg-secondary text-primary-container shadow-xl shadow-secondary/20"
+                             : active ? "bg-primary text-white shadow-2xl shadow-primary/40 animate-pulse"
+                             : "glass text-slate-400 opacity-40"}`}
+                    >
+                      <span className="material-symbols-outlined text-lg" style={done ? { fontVariationSettings: "'FILL' 1" } : {}}>
+                        {done ? "check" : active ? "auto_awesome" : i === 4 ? "rocket" : "lock"}
+                      </span>
+                    </div>
+                    <span className={`text-[9px] font-black uppercase tracking-widest text-center w-28
+                      ${done ? "text-white" : active ? "text-primary" : "text-slate-500"}`}>
+                      {step}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Operations */}
+        <div className="col-span-12 lg:col-span-3 space-y-4 animate-fade-in-up animate-delay-400">
+          <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-4 mb-6">Operations</h3>
+          {[
+            { icon: "upload_file", label: "Analyze File", sub: "RESCAN RESUME", color: "text-secondary bg-secondary/10", action: () => fileInputRef.current?.click() },
+            { icon: "terminal", label: "Neural Query", sub: "ASK AI TUTOR", color: "text-primary bg-primary/10", action: () => navigate("/chat-tutor") },
+            { icon: "navigation", label: "Plot Route", sub: "VIEW ROADMAP", color: "text-slate-400 bg-slate-800", action: () => navigate("/roadmap") },
+          ].map((op) => (
+            <button key={op.label} onClick={op.action} className="w-full p-5 glass hover:bg-white/5 rounded-3xl flex items-center gap-5 transition-all group border border-white/5">
+              <div className={`w-14 h-14 rounded-2xl ${op.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                <span className="material-symbols-outlined text-2xl">{op.icon}</span>
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-white">{op.label}</p>
+                <p className="text-[10px] text-slate-500 font-semibold tracking-wider">{op.sub}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Capability Matrix */}
+        <div className="col-span-12 lg:col-span-5 glass p-10 rounded-[3rem] animate-fade-in-up animate-delay-400">
+          <div className="flex justify-between items-center mb-10">
+            <h3 className="text-lg font-bold text-white font-headline">Capability Matrix</h3>
+            <span className="text-[10px] font-black text-primary px-3 py-1 bg-primary/10 rounded-lg">ACTIVE SCAN</span>
+          </div>
+          <div className="space-y-6">
+            {(resumeData?.skills?.slice(0, 4) || ["Logic Engines", "Interface Design", "System Architecture", "Social Diplomacy"]).map((skill, i) => {
+              const pcts = [88, 92, 45, 76];
+              const colors = ["from-indigo-500 to-primary", "from-emerald-500 to-secondary", "bg-slate-600", "from-indigo-400 to-indigo-600"];
+              const pct = resumeData ? Math.min(95, 50 + i * 10 + Math.random() * 20) : pcts[i];
+              return (
+                <div key={skill} className="space-y-2">
+                  <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-500">
+                    <span>{skill}</span>
+                    <span className="text-white">{Math.round(pct)}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className={`h-full bg-gradient-to-r ${colors[i]} rounded-full`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Event Log */}
+        <div className="col-span-12 lg:col-span-4 glass p-10 rounded-[3rem] animate-fade-in-up animate-delay-400">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-bold text-white font-headline">Event Log</h3>
+            <button onClick={() => navigate("/resume-analyzer")} className="text-[10px] font-black text-secondary hover:text-white uppercase tracking-widest transition-colors">History</button>
+          </div>
+          <div className="space-y-8">
+            {[
+              { icon: "check_circle", label: "Module Synced", sub: "Advanced React Hooks • 2h ago", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+              { icon: "analytics", label: "Tele-Analysis Complete", sub: resumeData ? `${resumeData.skills?.length || 0} skills detected` : "No resume yet", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+              { icon: "lightbulb", label: "Neural Suggestion", sub: resumeData?.suggestions?.[0]?.slice(0, 40) || "Upload resume for suggestions", color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
+            ].map((ev) => (
+              <div key={ev.label} className="flex gap-5 group">
+                <div className={`w-11 h-11 rounded-2xl ${ev.color} flex-shrink-0 flex items-center justify-center border group-hover:scale-110 transition-transform`}>
+                  <span className="material-symbols-outlined text-xl">{ev.icon}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">{ev.label}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{ev.sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Subscription row */}
+        {subscription && (
+          <div className="col-span-12 glass p-8 rounded-[2rem] animate-fade-in-up flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">Active Plan</p>
+              <h3 className="text-2xl font-bold text-white font-headline">
+                {subscription.subscription?.plan?.toUpperCase() || "Free"} Tier
+              </h3>
+              <p className="text-sm text-slate-400 mt-1">
+                {subscription.resumeUploadsRemaining !== undefined
+                  ? `${subscription.resumeUploadsRemaining} uploads remaining`
+                  : subscription.subscription?.status}
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <button onClick={() => navigate("/subscription")} className="btn-primary text-sm">Manage Plan</button>
+              <button onClick={() => navigate("/pricing")} className="btn-secondary text-sm">View Plans</button>
+            </div>
+          </div>
         )}
       </div>
-    </motion.button>
+
+      {/* Footer */}
+      <footer className="mt-20 flex justify-between items-center border-t border-white/5 pt-8 pb-4">
+        <div className="flex items-center gap-4">
+          <span className="text-lg font-bold text-white font-headline">Orbit Engine</span>
+          <span className="text-[10px] font-medium tracking-wider text-slate-600">© 2024 CELESTIAL CAREER ENGINE</span>
+        </div>
+        <div className="flex gap-10">
+          {["Operations", "Privacy", "Protocol"].map((l) => (
+            <span key={l} className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-white transition-colors cursor-pointer">{l}</span>
+          ))}
+        </div>
+      </footer>
+    </div>
   );
 }

@@ -1,11 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import SoftBackground from "../components/SoftBackground";
 
 export default function PaymentCancelled() {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen relative text-white flex items-center justify-center">
+      <SoftBackground />
 
       <div className="relative z-10 max-w-md w-full px-6 text-center">
         <motion.div

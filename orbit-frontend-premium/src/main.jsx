@@ -4,17 +4,11 @@ import App from "./App";
 import "./index.css";
 
 import AuthProvider from "./context/AuthContext";
-import { ThemeProvider } from './context/ThemeContext.jsx';
-import { LanguageProvider } from './context/LanguageContext.jsx';
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AuthProvider>
-      <ThemeProvider>
-        <LanguageProvider>
-          <App />
-        </LanguageProvider>
-      </ThemeProvider>
+      <App />
     </AuthProvider>
   </React.StrictMode>
 );

@@ -1,87 +1,26 @@
 import React from "react";
-import { motion } from "framer-motion";
 
 export default function SoftBackground() {
-  const displayColors = { 
-    primary: 'rgba(124, 58, 237, 0.7)', 
-    secondary: 'rgba(56, 189, 248, 0.7)', 
-    accent: 'rgba(236, 72, 153, 0.4)', 
-    bgCenter: 'rgba(99, 102, 241, 0.15)', 
-    stop1: '#050714' 
-  };
-
   return (
-    <div 
-      className="fixed inset-0 -z-10 overflow-hidden transition-colors duration-1000"
-      style={{ backgroundColor: displayColors.stop1 }}
-    >
-      <div className="absolute inset-0 mix-blend-screen opacity-90">
-        {/* Large central glowing orb */}
-        <motion.div 
-          animate={{
-            scale: [1, 1.1, 1],
-            x: [0, -20, 20, 0],
-            y: [0, 20, -20, 0],
-          }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-0 left-0 h-[45rem] w-[45rem] rounded-full blur-[120px]"
-          style={{ backgroundColor: displayColors.primary, opacity: 0.8 }}
-        />
-        
-        {/* Secondary massive orb bottom right */}
-        <motion.div 
-          animate={{
-            scale: [1, 1.25, 0.9, 1],
-            x: [0, 40, -40, 0],
-            y: [0, -30, 30, 0],
-          }}
-          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute bottom-0 right-0 h-[40rem] w-[40rem] rounded-full blur-[130px]"
-          style={{ backgroundColor: displayColors.secondary, opacity: 0.7 }}
-        />
+    <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 overflow-hidden">
+      <div className="absolute inset-0 opacity-90">
+        <div className="absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-indigo-500/25 blur-3xl animate-blob" />
+        <div className="absolute top-1/4 right-1/4 h-80 w-80 rounded-full bg-teal-400/20 blur-3xl animate-blob animation-delay-2000" />
+        <div className="absolute bottom-8 left-16 h-72 w-72 rounded-full bg-fuchsia-500/20 blur-3xl animate-blob animation-delay-4000" />
 
-        {/* Accent orb top right */}
-        <motion.div 
-          animate={{
-            scale: [1, 1.3, 1],
-            x: [0, -40, 40, 0],
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 5 }}
-          className="absolute top-0 right-10 h-[30rem] w-[30rem] rounded-full blur-[100px]"
-          style={{ backgroundColor: displayColors.accent, opacity: 0.6 }}
-        />
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.12), transparent 28%), radial-gradient(circle at 80% 70%, rgba(14, 165, 233, 0.12), transparent 28%), radial-gradient(circle at 50% 50%, rgba(251, 113, 133, 0.1), transparent 36%)' }} />
 
-        {/* Dynamic center gradient */}
-        <motion.div 
-          className="absolute inset-0 transition-opacity duration-1000" 
-          style={{ backgroundImage: `radial-gradient(circle at 50% 50%, ${displayColors.bgCenter}, transparent 65%)` }} 
-        />
-
-        {/* Floating particles (stars) */}
         {[...Array(12)].map((_, idx) => (
-          <motion.div
+          <div
             key={idx}
-            className="absolute rounded-full bg-white/70"
-            initial={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              opacity: 0.1 + Math.random() * 0.3
-            }}
-            animate={{
-              y: [0, -40, 0],
-              opacity: [0.1, 0.9, 0.1]
-            }}
-            transition={{
-              duration: 5 + Math.random() * 5,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: Math.random() * 3
-            }}
+            className="absolute rounded-full bg-white/20"
             style={{
-              width: `${2 + Math.random() * 3}px`,
-              height: `${2 + Math.random() * 3}px`,
-              filter: 'blur(1px)',
-              boxShadow: '0 0 10px rgba(255,255,255,0.8)'
+              width: `${20 + (idx % 5) * 8}px`,
+              height: `${20 + (idx % 5) * 8}px`,
+              animation: `float ${5 + (idx % 3) * 1.2}s ease-in-out infinite`,
+              top: `${Math.random() * 95}%`,
+              left: `${Math.random() * 95}%`,
+              opacity: 0.25 + (idx % 4) * 0.12,
             }}
           />
         ))}

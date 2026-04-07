@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API_CONFIG from "../utils/api";
+import SoftBackground from "../components/SoftBackground";
 import { motion } from "framer-motion";
 
 export default function Signup() {
@@ -46,6 +47,7 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12">
+      <SoftBackground />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}

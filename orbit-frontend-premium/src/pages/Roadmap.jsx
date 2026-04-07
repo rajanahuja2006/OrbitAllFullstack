@@ -1,427 +1,260 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
 import { API_CONFIG } from "../utils/api";
 
-const RESOURCE_LINKS = {
-  "Codecademy": "https://www.codecademy.com/",
-  "FreeCodeCamp": "https://www.freecodecamp.org/",
-  "CS50": "https://cs50.harvard.edu/x/",
-  "The Odin Project": "https://www.theodinproject.com/",
-  "LeetCode": "https://leetcode.com/",
-  "HackerRank": "https://www.hackerrank.com/",
-  "GeeksforGeeks": "https://www.geeksforgeeks.org/",
-  "AlgoExpert": "https://www.algoexpert.io/",
-  "MDN Web Docs": "https://developer.mozilla.org/",
-  "CSS Tricks": "https://css-tricks.com/",
-  "JavaScript.info": "https://javascript.info/",
-  "Frontend Masters": "https://frontendmasters.com/",
-  "React Documentation": "https://react.dev/",
-  "Vue Mastery": "https://www.vuemastery.com/",
-  "Angular University": "https://angular-university.io/",
-  "Next.js Docs": "https://nextjs.org/docs",
-  "Node.js Docs": "https://nodejs.org/en/docs",
-  "Express.js Guide": "https://expressjs.com/",
-  "MongoDB University": "https://learn.mongodb.com/",
-  "API Design": "https://swagger.io/resources/articles/best-practices-in-api-design/",
-  "SQLBolt": "https://sqlbolt.com/",
-  "MongoDB Docs": "https://www.mongodb.com/docs/",
-  "PostgreSQL Tutorial": "https://www.postgresqltutorial.com/",
-  "Database Design": "https://www.geeksforgeeks.org/database-design/",
-  "AWS Free Tier": "https://aws.amazon.com/free/",
-  "Docker Hub": "https://hub.docker.com/",
-  "Kubernetes Docs": "https://kubernetes.io/docs/",
-  "DevOps Roadmap": "https://roadmap.sh/devops",
-  "Git Tutorial": "https://git-scm.com/docs/gittutorial",
-  "GitHub Skills": "https://skills.github.com/",
-  "Atlassian Git": "https://www.atlassian.com/git",
-  "Git Flow": "https://nvie.com/posts/a-successful-git-branching-model/",
-  "Coursera ML": "https://www.coursera.org/learn/machine-learning",
-  "Fast.ai": "https://www.fast.ai/",
-  "TensorFlow Tutorials": "https://www.tensorflow.org/tutorials",
-  "PyTorch Docs": "https://pytorch.org/docs/",
-  "System Design Primer": "https://github.com/donnemartin/system-design-primer",
-  "Designing Data-Intensive Apps": "https://dataintensive.net/",
-  "Grokking System Design": "https://www.educative.io/courses/grokking-the-system-design-interview",
-  "Alex Xu Blog": "https://blog.bytebytego.com/",
-  "Full Stack Open": "https://fullstackopen.com/",
-  "MERN Stack Tutorial": "https://www.mongodb.com/mern-stack",
-  "Deployment Guides": "https://render.com/docs",
-  "Cloud Architecture": "https://aws.amazon.com/architecture/",
-  "Interview Cake": "https://www.interviewcake.com/",
-  "Pramp": "https://www.pramp.com/",
-  "LeetCode Interview Prep": "https://leetcode.com/explore/interview/",
-  "Glassdoor Interview Questions": "https://www.glassdoor.com/Interview/index.htm",
-  "AWS Solutions Architect": "https://aws.amazon.com/certification/certified-solutions-architect-associate/",
-  "Azure Developer": "https://learn.microsoft.com/en-us/credentials/certifications/azure-developer/",
-  "Google Cloud Professional": "https://cloud.google.com/learn/certification/cloud-architect",
-  "ML Specialization": "https://www.coursera.org/specializations/machine-learning-introduction",
-  "Deep Learning Course": "https://www.coursera.org/specializations/deep-learning",
-  "AI Engineer Path": "https://learn.microsoft.com/en-us/credentials/certifications/azure-ai-engineer/",
-  "React Advanced Patterns": "https://frontendmasters.com/courses/advanced-react-patterns/",
-  "UI/UX Design": "https://www.coursera.org/specializations/ui-ux-design",
-  "Backend Architecture": "https://www.coursera.org/learn/backend-architecture",
-  "Microservices Course": "https://www.udemy.com/topic/microservices/"
-};
-
 export default function Roadmap() {
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [roadmapData, setRoadmapData] = useState(null);
+  const [resumeData, setResumeData] = useState(null);
+  const [selectedStep, setSelectedStep] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [hoveredStep, setHoveredStep] = useState(null);
-  const [newCourse, setNewCourse] = useState("");
-  const [addingCourse, setAddingCourse] = useState(false);
 
   useEffect(() => {
-    fetchRoadmap();
+    fetchData();
   }, []);
 
-  const handleAddCourse = async () => {
-    if (!newCourse.trim()) return;
-    setAddingCourse(true);
+  const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${API_CONFIG.BASE_URL}/resume/add-course`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ course: newCourse.trim() })
-      });
-      if (res.ok) {
-        setNewCourse("");
-        fetchRoadmap();
+      const [resumeRes] = await Promise.all([
+        fetch(API_CONFIG.RESUME_MY_RESUMES, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (resumeRes.ok) {
+        const data = await resumeRes.json();
+        if (data.length > 0) {
+          setResumeData(data[0]);
+          setRoadmapData(data[0].roadmap || data[0]);
+        }
       }
-    } catch(err) {
-      console.error(err);
-    } finally {
-      setAddingCourse(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   };
 
-  const fetchRoadmap = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(API_CONFIG.RESUME_ROADMAP, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  const steps = roadmapData?.roadmapSteps || roadmapData?.steps || [
+    { title: "React Basics", status: "completed", phase: "Phase 1 Complete" },
+    { title: "Advanced State Management", status: "active", phase: "Active Protocol" },
+    { title: "End-to-End Testing", status: "locked", phase: "Queue" },
+    { title: "CI/CD Pipelines", status: "encrypted", phase: "Encrypted" },
+  ];
 
-      if (response.ok) {
-        const data = await response.json();
-        setRoadmapData(data);
-      } else if (response.status === 404) {
-        setError("Please upload a resume first to generate your personalized roadmap.");
-      } else {
-        setError("Failed to load roadmap");
-      }
-    } catch (error) {
-      console.error("Error fetching roadmap:", error);
-      setError("Error loading roadmap");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const activeStep = selectedStep !== null ? steps[selectedStep] : steps.find((s) => s.status === "active") || steps[1];
+  const activeIdx = selectedStep !== null ? selectedStep : steps.findIndex((s) => s.status === "active");
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "completed":
-        return { bg: "from-green-500/20 to-green-600/10", border: "border-green-500/50", icon: "✅" };
-      case "current":
-        return { bg: "from-cyan-500/20 to-blue-500/10", border: "border-cyan-500/50", icon: "🎯" };
-      case "locked":
-        return { bg: "from-gray-500/20 to-gray-600/10", border: "border-gray-500/30", icon: "🔒" };
-      default:
-        return { bg: "from-purple-500/20 to-purple-600/10", border: "border-purple-500/30", icon: "📌" };
-    }
-  };
-
-  const getDifficultyColor = (difficulty) => {
-    switch (difficulty) {
-      case "Beginner":
-        return { color: "text-green-400", bg: "bg-green-500/20" };
-      case "Intermediate":
-        return { color: "text-yellow-400", bg: "bg-yellow-500/20" };
-      case "Advanced":
-        return { color: "text-red-400", bg: "bg-red-500/20" };
-      default:
-        return { color: "text-gray-400", bg: "bg-gray-500/20" };
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen relative text-white">
-        <div className="relative z-10 flex items-center justify-center h-screen">
-          <div className="text-center">
-            <motion.div
-              animate={{ scale: [1, 1.2, 1], rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="text-6xl mb-4"
-            >
-              🛣️
-            </motion.div>
-            <p className="text-2xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-              Generating your personalized roadmap...
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen relative text-white">
-        <div className="relative z-10 max-w-4xl mx-auto px-6 py-20">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <h1 className="text-5xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent mb-8">
-              Roadmap Not Available
-            </h1>
-            <div className="p-10 rounded-3xl bg-gradient-to-r from-red-500/20 to-orange-500/10 border border-red-500/30 backdrop-blur-md">
-              <p className="text-xl text-red-200 mb-8">{error}</p>
-              <button
-                onClick={() => navigate("/dashboard")}
-                className="px-8 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold transition-all hover:scale-105"
-              >
-                📊 Go to Dashboard
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
+  const syncPct = resumeData?.roadmapProgress ?? 80;
 
   return (
-    <div className="min-h-screen relative text-white">
+    <div className="min-h-screen p-10 max-w-[1600px] relative overflow-x-hidden">
+      {/* Cosmic background */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-primary/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[20%] right-[-10%] w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[150px]" />
+      </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-20">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass p-10 rounded-3xl mb-16"
-        >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-            <div>
-              <h1 className="text-4xl font-bold text-white mb-2">
-                Your AI-Powered Roadmap <span className="text-brand-200">🛣️</span>
-              </h1>
-              <p className="text-lg text-white/70">
-                A personalized learning path designed just for you.
-              </p>
+      {/* Header */}
+      <header className="flex justify-between items-center mb-16 relative z-10 animate-fade-in-up">
+        <div>
+          <h2 className="text-4xl font-headline font-bold text-white tracking-tighter">
+            Roadmap <span className="text-primary">Protocols</span>
+          </h2>
+          <p className="text-slate-400 font-medium mt-1">AI-synchronized trajectory for your career breakthrough.</p>
+        </div>
+        <div className="flex items-center gap-6">
+          <button className="w-12 h-12 rounded-2xl glass flex items-center justify-center text-slate-300 hover:text-white transition-all border border-white/5">
+            <span className="material-symbols-outlined">notifications</span>
+          </button>
+          <div className="flex items-center gap-4 pl-6 border-l border-white/10">
+            <div className="text-right">
+              <p className="text-sm font-bold text-white">{user?.name || "Operator"}</p>
+              <p className="text-[9px] text-secondary font-black uppercase tracking-widest">Operator · BTech L3</p>
             </div>
-            
-            {/* Manual Course Input */}
-            <div className="flex items-center gap-2 bg-gray-900/50 p-2 rounded-2xl border border-white/10">
-              <input 
-                type="text" 
-                value={newCourse}
-                onChange={(e) => setNewCourse(e.target.value)}
-                placeholder="e.g. React, AWS Certificate..." 
-                className="bg-transparent border-none outline-none text-white px-4 py-2 w-48 placeholder-gray-500"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddCourse()}
-              />
-              <button 
-                onClick={handleAddCourse}
-                disabled={addingCourse || !newCourse.trim()}
-                className="bg-cyan-500 hover:bg-cyan-400 text-white p-2 px-4 rounded-xl font-bold transition-all disabled:opacity-50"
-              >
-                {addingCourse ? "..." : "Add Past Course"}
+            <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center text-white font-bold text-xl relative">
+              {(user?.name || "O")[0].toUpperCase()}
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-secondary border-2 border-[#020617] rounded-full" />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Content Grid */}
+      <div className="grid grid-cols-12 gap-10 relative z-10">
+
+        {/* Hero text */}
+        <div className="col-span-12 lg:col-span-8 animate-fade-in-up animate-delay-100">
+          <h1 className="text-6xl font-black tracking-tighter text-white mb-6 leading-[0.9] glow-text">
+            Your Path to <br />
+            <span className="text-secondary">
+              {roadmapData?.targetRole || resumeData?.targetRole || "Software Engineer"}
+            </span>
+          </h1>
+          <p className="text-xl text-slate-400 leading-relaxed max-w-2xl font-medium">
+            The AI has analyzed 450+ industry requirements to curate your specialized learning trajectory. Focus on these milestones to close the skill gap.
+          </p>
+        </div>
+
+        {/* Role readiness card */}
+        <div className="col-span-12 lg:col-span-4 glass p-10 rounded-[3rem] relative overflow-hidden flex flex-col justify-between animate-fade-in-up animate-delay-200">
+          <div>
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-bold text-white font-headline">System Sync</h3>
+              <span className="material-symbols-outlined text-primary">sensors</span>
+            </div>
+            <p className="text-xs text-slate-400 mb-8 font-medium">Target role compatibility index</p>
+          </div>
+          <div className="flex items-end justify-between mb-4">
+            <span className="text-7xl font-bold font-headline text-white tracking-tighter">
+              {syncPct}<span className="text-3xl text-secondary ml-1">%</span>
+            </span>
+            <span className="text-[10px] font-black text-secondary bg-secondary/10 px-4 py-1.5 rounded-full mb-3 border border-secondary/20">
+              {syncPct >= 80 ? "ADVANCED" : syncPct >= 60 ? "PROGRESS" : "BUILDING"}
+            </span>
+          </div>
+          <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-primary to-secondary rounded-full shadow-[0_0_20px_rgba(99,102,241,0.5)] transition-all duration-1000"
+              style={{ width: `${syncPct}%` }} />
+          </div>
+          <p className="text-xs text-slate-500 mt-4 font-medium flex items-center gap-2">
+            <span className="material-symbols-outlined text-xs">info</span>
+            Next milestone: {steps.find((s) => s.status === "locked")?.title || "Keep going!"}
+          </p>
+        </div>
+
+        {/* Roadmap Timeline */}
+        <div className="col-span-12 xl:col-span-4 space-y-8 relative py-8 animate-fade-in-up animate-delay-300">
+          {/* Vertical connector */}
+          <div className="absolute left-10 top-0 bottom-0 w-[2px] bg-white/5 rounded-full overflow-hidden">
+            <div className="h-[45%] w-full animated-connector rounded-full shadow-[0_0_15px_rgba(16,185,129,0.3)]" />
+          </div>
+
+          {loading && (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+
+          {!loading && steps.map((step, idx) => {
+            const done = step.status === "completed";
+            const active = step.status === "active";
+            const locked = step.status === "locked" || step.status === "encrypted";
+            const isSelected = (selectedStep ?? activeIdx) === idx;
+
+            return (
+              <div key={idx} onClick={() => setSelectedStep(idx)}
+                className={`relative flex items-center gap-8 group cursor-pointer transition-all ${locked ? "opacity-50 hover:opacity-100" : ""}`}>
+                <div className={`z-10 w-12 h-12 rounded-2xl flex items-center justify-center border border-white/20 transition-all group-hover:scale-110
+                  ${done ? "bg-secondary text-primary-container shadow-lg shadow-secondary/20"
+                  : active ? "bg-primary text-white shadow-2xl shadow-primary/40 animate-pulse"
+                  : "glass text-slate-500"}`}>
+                  <span className="material-symbols-outlined" style={done ? { fontVariationSettings: "'FILL' 1" } : {}}>
+                    {done ? "check" : active ? "auto_awesome" : "lock"}
+                  </span>
+                </div>
+                <div className={`flex-1 p-5 glass rounded-2xl transition-all group-hover:bg-white/5
+                  ${done ? "border-l-4 border-secondary/40" : ""}
+                  ${active ? "border-l-4 border-primary shadow-2xl shadow-primary/10" : ""}
+                  ${isSelected ? "bg-white/10" : ""}`}>
+                  <span className={`text-[9px] font-black uppercase tracking-[0.2em] mb-1 block
+                    ${done ? "text-secondary" : active ? "text-primary" : "text-slate-500"}`}>
+                    {step.phase || (done ? "Complete" : active ? "Active Protocol" : "Queue")}
+                  </span>
+                  <h4 className={`font-bold text-base ${locked ? "text-slate-300" : "text-white"}`}>
+                    {step.title}
+                  </h4>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Active module detail */}
+        <div className="col-span-12 xl:col-span-8 animate-fade-in-up animate-delay-400">
+          <div className="glass p-12 rounded-[3.5rem] relative overflow-hidden shadow-2xl border border-white/5">
+            <div className="flex flex-col lg:flex-row justify-between items-start gap-10 mb-12">
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/10 text-primary rounded-full border border-primary/20">
+                  <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Active Module Scan</span>
+                </div>
+                <h2 className="text-5xl font-bold text-white tracking-tight leading-none font-headline">
+                  {activeStep?.title || "Advanced State Management"}
+                </h2>
+                <p className="text-slate-400 leading-relaxed max-w-xl text-lg font-medium">
+                  {activeStep?.description || "Master the complexities of modern application state. Move beyond simple props and hooks into Redux Toolkit, React Query, and atomic state libraries."}
+                </p>
+              </div>
+              <div className="glass bg-white/5 p-6 rounded-3xl min-w-[220px] flex flex-col items-center justify-center border border-white/10 hover:scale-105 transition-all">
+                <span className="material-symbols-outlined text-secondary text-4xl mb-3">schedule</span>
+                <span className="text-3xl font-black text-white">{activeStep?.duration || "12 Hours"}</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Est. Synchrony</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Resource cards */}
+              {[
+                { icon: "video_library", label: "Mastering Redux Toolkit", sub: "Video Core • YouTube", color: "bg-red-500/10 text-red-500" },
+                { icon: "menu_book", label: "Official Documentation", sub: "Deep Dive • docs.react.com", color: "bg-blue-500/10 text-blue-500" },
+              ].map((r) => (
+                <a key={r.label} href="#" className="group/link glass bg-white/5 p-8 rounded-3xl transition-all hover:bg-white/10 hover:-translate-y-2 border border-white/5">
+                  <div className="flex items-center gap-5">
+                    <div className={`w-14 h-14 ${r.color} rounded-2xl flex items-center justify-center group-hover/link:rotate-6 transition-transform`}>
+                      <span className="material-symbols-outlined text-3xl">{r.icon}</span>
+                    </div>
+                    <div className="flex-1">
+                      <h5 className="font-bold text-white text-lg">{r.label}</h5>
+                      <p className="text-xs text-slate-500 font-semibold tracking-wider uppercase mt-1">{r.sub}</p>
+                    </div>
+                    <span className="material-symbols-outlined text-slate-600 group-hover/link:text-white transition-all">chevron_right</span>
+                  </div>
+                </a>
+              ))}
+
+              {/* Sandbox CTA */}
+              <div className="md:col-span-2 bg-gradient-to-br from-primary via-indigo-600 to-indigo-900 p-10 rounded-[2.5rem] relative overflow-hidden hover:shadow-[0_20px_60px_rgba(99,102,241,0.4)] transition-all group/sandbox">
+                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                  <div className="text-white space-y-2">
+                    <h4 className="text-2xl font-bold tracking-tight">Launch Interactive Sandbox</h4>
+                    <p className="text-white/70 text-sm font-medium">Practice in a live, AI-monitored environment.</p>
+                  </div>
+                  <button className="px-10 py-4 bg-white text-primary font-black rounded-2xl shadow-xl transition-all hover:scale-105 active:scale-95 uppercase text-xs tracking-[0.2em]">
+                    Start Lab
+                  </button>
+                </div>
+                <div className="absolute -right-10 -top-10 w-64 h-64 bg-secondary/30 rounded-full blur-[80px] opacity-50" />
+              </div>
+            </div>
+
+            {/* Ask tutor */}
+            <div className="mt-10 glass bg-primary/10 p-8 rounded-3xl flex flex-col md:flex-row items-center gap-8 border border-primary/20 hover:bg-primary/20 transition-all cursor-pointer group/tutor"
+              onClick={() => navigate("/chat-tutor")}>
+              <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center text-primary shadow-2xl group-hover/tutor:scale-110 transition-transform">
+                <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h4 className="text-xl font-bold text-white">Need help with {activeStep?.title || "this module"}?</h4>
+                <p className="text-sm text-slate-400 font-medium">Orbit AI is ready to explain concepts using analogies you'll love.</p>
+              </div>
+              <button className="px-8 py-3 bg-secondary text-primary-container rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:scale-105 transition-all">
+                Ask Career Tutor
               </button>
             </div>
           </div>
-
-          {roadmapData && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/10 border border-green-500/30"
-              >
-                <p className="text-green-300 text-sm font-semibold">Current Level</p>
-                <p className="text-2xl font-bold text-green-400 mt-2">
-                  {roadmapData.currentSkills?.slice(0, 2).join(", ") || "Beginner"}
-                </p>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/10 border border-cyan-500/30"
-              >
-                <p className="text-cyan-300 text-sm font-semibold">ATS Score</p>
-                <p className="text-2xl font-bold text-cyan-400 mt-2">{roadmapData.atsScore}%</p>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-500/30"
-              >
-                <p className="text-purple-300 text-sm font-semibold">Progress</p>
-                <p className="text-2xl font-bold text-purple-400 mt-2">
-                  {roadmapData.completedSteps}/{roadmapData.totalSteps}
-                </p>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-gradient-to-br from-orange-500/20 to-red-500/10 border border-orange-500/30"
-              >
-                <p className="text-orange-300 text-sm font-semibold">Est. Time</p>
-                <p className="text-2xl font-bold text-orange-400 mt-2">
-                  {roadmapData.totalSteps * 2}w
-                </p>
-              </motion.div>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Progress Bar */}
-        {roadmapData && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-16">
-            <div className="flex justify-between items-center mb-4 px-2">
-              <p className="text-gray-300 font-semibold">Overall Progress</p>
-              <p className="text-cyan-400 font-bold text-lg">
-                {Math.round((roadmapData.completedSteps / roadmapData.totalSteps) * 100)}%
-              </p>
-            </div>
-            <div className="relative h-3 rounded-full overflow-hidden bg-gray-800 border border-gray-700">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${(roadmapData.completedSteps / roadmapData.totalSteps) * 100}%` }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500"
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Roadmap Steps */}
-        <motion.div className="space-y-6">
-          {roadmapData?.roadmap.map((step, idx) => {
-            const statusInfo = getStatusColor(step.status);
-            const diffInfo = getDifficultyColor(step.difficulty);
-            const isCompleted = step.status === "completed";
-
-            return (
-              <motion.div
-                key={step.id}
-                className="relative pl-12 before:content-[''] before:absolute before:top-0 before:left-6 before:h-full before:w-px before:bg-white/10"
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                onHoverStart={() => setHoveredStep(idx)}
-                onHoverEnd={() => setHoveredStep(null)}
-              >
-                <div className="flex gap-6 items-start">
-                  {/* Timeline Icon */}
-                  <motion.div
-                    whileHover={{ scale: 1.2, rotate: 8 }}
-                    className={`flex h-12 w-12 items-center justify-center rounded-full border-2 border-white/20 shadow-lg bg-gradient-to-br ${statusInfo.bg}`}
-                  >
-                    {statusInfo.icon}
-                  </motion.div>
-
-                  {/* Card Content */}
-                  <motion.div
-                    whileHover={{ scale: 1.02, x: 10 }}
-                    className={`flex-1 p-8 rounded-2xl border ${statusInfo.border} bg-gradient-to-br ${statusInfo.bg} backdrop-blur-md cursor-pointer transition-all`}
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="px-3 py-1 rounded-full bg-white/10 text-xs font-bold text-gray-300">
-                            Step {idx + 1}
-                          </span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${diffInfo.color} ${diffInfo.bg}`}>
-                            {step.difficulty}
-                          </span>
-                        </div>
-                        <h3 className="text-2xl font-bold text-white">{step.title}</h3>
-                      </div>
-                      <motion.div
-                        animate={hoveredStep === idx ? { scale: 1.1 } : { scale: 1 }}
-                        className="text-3xl"
-                      >
-                        {step.difficulty === "Beginner" ? "🌱" : step.difficulty === "Intermediate" ? "🌿" : "🌳"}
-                      </motion.div>
-                    </div>
-
-                    <p className="text-gray-300 mb-6 leading-relaxed">{step.description}</p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div className="p-4 rounded-xl bg-white/5">
-                        <p className="text-gray-400 text-sm font-semibold mb-2">⏱️ Est. Time</p>
-                        <p className="text-white font-bold">{step.estimatedTime}</p>
-                      </div>
-                      {step.requiredSkills.length > 0 && (
-                        <div className="p-4 rounded-xl bg-white/5">
-                          <p className="text-gray-400 text-sm font-semibold mb-2">🔗 Prerequisites</p>
-                          <p className="text-white font-bold">{step.requiredSkills.join(", ")}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Resources */}
-                    {step.resources && step.resources.length > 0 && (
-                      <div className="pt-6 border-t border-white/10">
-                        <p className="text-gray-400 text-sm font-semibold mb-3">📚 Recommended Resources</p>
-                        <div className="flex flex-wrap gap-2">
-                          {step.resources.map((resource, ridx) => {
-                            const linkUrl = RESOURCE_LINKS[resource] || `https://www.google.com/search?q=${encodeURIComponent(resource + " tutorial")}`;
-                            return (
-                              <motion.a
-                                key={ridx}
-                                href={linkUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                whileHover={{ scale: 1.05 }}
-                                className="px-4 py-2 rounded-full text-sm font-semibold bg-gradient-to-r from-purple-500/30 to-blue-500/30 border border-purple-500/50 text-purple-300 hover:border-purple-400 hover:text-white hover:bg-purple-600/40 transition-all cursor-pointer inline-flex items-center gap-1"
-                              >
-                                {resource} <span className="text-xs">↗</span>
-                              </motion.a>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Status Badge */}
-                    <motion.div className="mt-6 pt-4 border-t border-white/10">
-                      <span className={`inline-block px-4 py-2 rounded-full text-xs font-bold ${
-                        isCompleted ? "bg-green-500/30 text-green-300 border border-green-500/50" :
-                        step.status === "current" ? "bg-cyan-500/30 text-cyan-300 border border-cyan-500/50" :
-                        "bg-gray-500/30 text-gray-300 border border-gray-500/50"
-                      }`}>
-                        {isCompleted ? "✅ Completed" : step.status === "current" ? "🎬 Current Focus" : "🔒 Locked - Complete previous steps"}
-                      </span>
-                    </motion.div>
-                  </motion.div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-
-        {/* Follow-up CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          className="mt-16 p-10 rounded-3xl bg-gradient-to-r from-cyan-500/20 to-blue-500/10 border border-cyan-500/30 text-center"
-        >
-          <h2 className="text-3xl font-bold text-white mb-4">Keep Growing! 🚀</h2>
-          <p className="text-gray-300 mb-8">Need personalized guidance? Chat with our AI tutor</p>
-          <button
-            onClick={() => navigate("/chat-tutor")}
-            className="px-8 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold transition-all hover:scale-105 text-lg"
-          >
-            💬 Start Chat with AI Tutor
-          </button>
-        </motion.div>
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="mt-20 flex justify-between items-center border-t border-white/5 py-12 relative z-10 animate-fade-in-up">
+        <div className="flex items-center gap-4">
+          <span className="text-xl font-bold text-white font-headline">Orbit Engine</span>
+          <span className="text-[10px] font-medium tracking-wider text-slate-600 uppercase">© 2024 CELESTIAL CAREER ENGINE</span>
+        </div>
+        <div className="flex gap-10">
+          {["Operations", "Privacy", "System Status"].map((l) => (
+            <span key={l} className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-white transition-colors cursor-pointer">{l}</span>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }
