@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, User, Settings, Save, Sparkles, BookOpen, Clock, Laptop } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function ProfileSettingsModal({ isOpen, onClose }) {
   const [activeTab, setActiveTab] = useState("profile");
@@ -101,11 +103,15 @@ function InputField({ label, placeholder, type = "text" }) {
   );
 }
 
-function SelectField({ label, options }) {
+function SelectField({ label, options, value, onChange }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold text-white/70 tracking-wide uppercase">{label}</label>
-      <select className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-sm text-white transition focus:border-indigo-500 focus:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+      <select 
+        value={value} 
+        onChange={onChange}
+        className="w-full rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-sm text-white transition focus:border-indigo-500 focus:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+      >
         {options.map((opt) => (
           <option key={opt}>{opt}</option>
         ))}
@@ -180,12 +186,14 @@ function ProfileContent() {
 }
 
 function SettingsContent() {
+  const { theme, toggleTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
 
   return (
     <div className="space-y-8 text-white animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       <section>
-        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">Account</h3>
+        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">{t("account")}</h3>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 mb-4">
           <InputField label="Email Address" type="email" placeholder="example@email.com" />
           <InputField label="New Password" type="password" placeholder="••••••••" />
@@ -193,7 +201,7 @@ function SettingsContent() {
       </section>
 
       <section>
-        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">Notifications</h3>
+        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">{t("notifications")}</h3>
         <div className="space-y-3">
           <ToggleSwitch label="Study Reminders" description="Receive a notification when it's time to study." defaultChecked />
           <ToggleSwitch label="Progress Alerts" description="Get updates when you hit your learning milestones." defaultChecked />
@@ -201,7 +209,7 @@ function SettingsContent() {
       </section>
 
       <section>
-        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">Learning Settings</h3>
+        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">{t("learningSettings")}</h3>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <SelectField label="Difficulty Level" options={["Beginner", "Intermediate", "Advanced", "Expert"]} />
           <SelectField label="Pace" options={["Relaxed", "Standard", "Intensive", "Bootcamp"]} />
@@ -210,7 +218,7 @@ function SettingsContent() {
       </section>
 
       <section>
-        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">AI Settings</h3>
+        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">{t("aiSettings")}</h3>
         <div className="flex gap-4">
           <button className="rounded-xl border border-indigo-500/50 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-300 hover:bg-indigo-500/20 transition">
             Regenerate Career Path
@@ -222,20 +230,30 @@ function SettingsContent() {
       </section>
 
       <section>
-        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">Privacy & Appearance</h3>
+        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">{t("privacyAppearance")}</h3>
         <div className="space-y-3 mb-6">
           <ToggleSwitch label="Public Profile" description="Allow recruiters to see your verified skills and roadmap." />
           <ToggleSwitch label="Data Sharing" description="Share anonymized learning data to improve Orbit AI." defaultChecked />
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <SelectField label="UI Interface Style" options={["Dark Mode (Default)", "Light Mode", "System Sync"]} />
-          <SelectField label="Language" options={["English", "Spanish", "French", "Hindi"]} />
+          <SelectField 
+            label="UI Interface Style" 
+            options={["Dark Mode (Default)", "Light Mode"]} 
+            value={theme}
+            onChange={(e) => toggleTheme(e.target.value)}
+          />
+          <SelectField 
+            label="Language" 
+            options={["English", "Spanish", "French", "Hindi"]} 
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+          />
         </div>
       </section>
 
       <section>
-        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">Data & Support</h3>
+        <h3 className="mb-4 text-lg font-bold text-gray-300 border-b border-white/10 pb-2">{t("dataSupport")}</h3>
         <div className="flex flex-wrap gap-4">
           <button className="rounded-xl border border-red-500/50 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-300 hover:bg-red-500/20 transition hover:bg-red-500/30">
             Reset Progress

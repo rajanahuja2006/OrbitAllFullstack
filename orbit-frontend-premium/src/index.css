@@ -29,6 +29,21 @@
   ::selection {
     background: rgba(124, 58, 237, 0.35);
   }
+
+  html.light-mode-active {
+    filter: invert(1) hue-rotate(180deg);
+  }
+
+  html.light-mode-active img, 
+  html.light-mode-active video, 
+  html.light-mode-active iframe {
+    filter: invert(1) hue-rotate(180deg); /* Counter-invert media */
+  }
+
+  /* Make sure the text on light mode provides adequate contrast */
+  html.light-mode-active p.text-gray-300 {
+    color: #4b5563; /* Make grays darker when inverted */
+  }
 }
 
 @layer utilities {
