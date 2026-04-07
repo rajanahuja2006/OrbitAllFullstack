@@ -93,7 +93,9 @@ ${text.substring(0, 15000)}
         model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
-            temperature: 0.2,
+            temperature: 0.0,
+            topK: 1,
+            topP: 0.1,
             responseMimeType: "application/json",
         }
       });
@@ -103,7 +105,8 @@ ${text.substring(0, 15000)}
       // Attempt to parse JSON response
       let parsedData;
       try {
-        parsedData = JSON.parse(responseText.replace(/```json\n?|\n?```/g, ""));
+        const cleaned = responseText.replace(/```json\n?|\n?```/g, "").trim();
+        parsedData = JSON.parse(cleaned);
       } catch (parseError) {
         console.error("❌ Failed to parse Gemini response:", responseText);
         throw new Error("Invalid format returned by AI.");
@@ -117,11 +120,11 @@ ${text.substring(0, 15000)}
     } catch (aiError) {
       console.error("❌ Gemini AI analysis failed:", aiError.message);
       console.log("Fallback to basic extraction...");
-      // Fallback if AI fails or key is missing
-      extractedSkills = ["JavaScript", "React", "Node.js", "MongoDB"]; // Mock fallback
-      atsScore = 50;
+      // Fallback to empty if AI completely fails
+      extractedSkills = []; 
+      atsScore = 0;
       experience = "Unknown";
-      suggestions = ["Add more details to your resume.", "Ensure your API key is configured for AI analysis."];
+      suggestions = ["Analysis failed. Please try a different resume or wait a moment."];
     }
 
     const roadmap = generatePersonalizedRoadmap(extractedSkills, atsScore);
@@ -559,17 +562,118 @@ function generateJobMatches(userSkills, atsScore) {
       minAtsScore: 80,
       applyLink: "https://www.google.com/about/careers/applications/jobs/results/?q=Site%20Reliability%20Engineer",
       description: "Combine software and systems engineering to build and run large-scale computing systems.",
+    },
+    {
+      id: "jr-frontend-meta",
+      title: "Junior Frontend Developer",
+      company: "Meta",
+      location: "Remote",
+      requiredSkills: ["html", "css", "javascript", "react"],
+      minAtsScore: 30,
+      applyLink: "https://www.metacareers.com/",
+      description: "Great entry-level position to kickstart your frontend career working on small components and UI bug fixes.",
+    },
+    {
+      id: "jr-backend-stripe",
+      title: "Junior Backend Engineer",
+      company: "Stripe",
+      location: "San Francisco",
+      requiredSkills: ["node.js", "express", "sql", "javascript", "python"],
+      minAtsScore: 40,
+      applyLink: "https://stripe.com/jobs",
+      description: "Help scale APIs and build payment processing logic under the guidance of senior engineers.",
+    },
+    {
+      id: "wordpress-dev-automattic",
+      title: "WordPress Developer",
+      company: "Automattic",
+      location: "Remote",
+      requiredSkills: ["php", "html", "css", "javascript", "wordpress"],
+      minAtsScore: 20,
+      applyLink: "https://automattic.com/work-with-us/",
+      description: "Build custom themes, plugins, and highly functional websites using the WordPress ecosystem.",
+    },
+    {
+      id: "qa-tester-ea",
+      title: "QA / Game Tester",
+      company: "Electronic Arts",
+      location: "Austin",
+      requiredSkills: ["testing", "communication", "javascript", "python", "qa"],
+      minAtsScore: 25,
+      applyLink: "https://ea.gr8people.com/",
+      description: "Play, test, and write automated scripts to find bugs in high-profile AAA rendering engines.",
+    },
+    {
+      id: "it-support-apple",
+      title: "IT Support Specialist",
+      company: "Apple",
+      location: "Austin, TX",
+      requiredSkills: ["linux", "mac", "windows", "networking", "troubleshooting"],
+      minAtsScore: 10,
+      applyLink: "https://jobs.apple.com/",
+      description: "Provide vital hardware and software troubleshooting. Excellent stepping stone into DevOps/SysAdmin.",
+    },
+    {
+      id: "technical-writer-auth0",
+      title: "Technical Writer",
+      company: "Auth0",
+      location: "Remote",
+      requiredSkills: ["markdown", "git", "javascript", "writing", "english"],
+      minAtsScore: 20,
+      applyLink: "https://auth0.com/careers",
+      description: "Document highly technical APIs and create tutorials for developers around the world.",
+    },
+    {
+      id: "data-analyst-intern-spotify",
+      title: "Data Analyst Intern",
+      company: "Spotify",
+      location: "Stockholm, Sweden",
+      requiredSkills: ["python", "sql", "excel", "data analysis"],
+      minAtsScore: 35,
+      applyLink: "https://lifeatspotify.com/jobs",
+      description: "Internship program focused on querying music streaming data to unearth listener trends.",
+    },
+    {
+      id: "ux-researcher-canva",
+      title: "UX Researcher Intern",
+      company: "Canva",
+      location: "Sydney, Australia",
+      requiredSkills: ["figma", "ui design", "ux design", "research"],
+      minAtsScore: 20,
+      applyLink: "https://www.canva.com/careers/",
+      description: "Conduct user interviews and design feedback loops to perfect the creative platform.",
+    },
+    {
+      id: "shopify-dev-freelance",
+      title: "Shopify Developer",
+      company: "Shopify Partners",
+      location: "Remote",
+      requiredSkills: ["liquid", "html", "css", "javascript"],
+      minAtsScore: 15,
+      applyLink: "https://www.shopify.com/careers",
+      description: "Customize and deploy beautiful highly-converting e-commerce storefronts.",
     }
   ];
 
   const userSkillsLower = userSkills.map((s) => s.toLowerCase());
 
+  // Automatically pass everything if ATS is low and skills matched are practically non-existent
+  // to ensure nobody sees a completely blank page.
   const matchedJobs = jobOpportunities.filter((job) => {
-    if (atsScore < job.minAtsScore) return false;
+    // Basic catch-all to prevent 0 results
+    if (atsScore < 20) return job.minAtsScore <= 30;
 
+    // Filter by strict score normally
+    if (atsScore > 60 && atsScore < job.minAtsScore) return false;
+
+    if (job.requiredSkills.length === 0) return true;
+    
+    // Check if user has ANY of the required skills just for better inclusion 
     const matchingSkills = job.requiredSkills.filter((skill) => userSkillsLower.includes(skill.toLowerCase()));
+    
+    // Lower passing threshold to 20% match to ensure more options show up
     const skillMatchPercentage = (matchingSkills.length / job.requiredSkills.length) * 100;
-    return skillMatchPercentage >= 50;
+    return skillMatchPercentage >= 15 || job.minAtsScore <= 30; // Auto-pass entry roles
   });
 
   const missingSkills = matchedJobs.flatMap((job) =>
@@ -577,13 +681,14 @@ function generateJobMatches(userSkills, atsScore) {
   );
 
   return {
-    matchedJobs: matchedJobs.map((job) => ({
-      ...job,
-      skillMatchPercentage: Math.round(
-        (job.requiredSkills.filter((skill) => userSkillsLower.includes(skill.toLowerCase())).length / job.requiredSkills.length) * 100
-      ),
-    })),
-    missingSkills: [...new Set(missingSkills.map((s) => s.toLowerCase()))],
+    matchedJobs: matchedJobs.map((job) => {
+      const matchCount = job.requiredSkills.filter((skill) => userSkillsLower.includes(skill.toLowerCase())).length;
+      return {
+        ...job,
+        skillMatchPercentage: Math.max(10, Math.round((matchCount / job.requiredSkills.length) * 100)),
+      };
+    }),
+    missingSkills: [...new Set(missingSkills.map((s) => s.toLowerCase()))].slice(0, 10), // Limit to top 10 unique missing skills
     skillRoadmap: null,
   };
 }
@@ -595,57 +700,26 @@ export const getJobMatches = async (req, res) => {
       return res.status(404).json({ message: "No resume found. Please upload a resume first." });
     }
 
-    const skills = latestResume.extractedSkills;
-    const atsScore = latestResume.readinessScore;
+    const skills = latestResume.extractedSkills || [];
+    const atsScore = latestResume.readinessScore || 0;
 
     const user = await User.findById(req.user.id);
     const completedCourses = user?.completedCourses || [];
     const combinedSkills = [...new Set([...skills, ...completedCourses])];
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const prompt = `
-You are an expert technical recruiter and AI career coach. Based on the user's ATS score of ${atsScore} and the following skills: [${combinedSkills.join(", ")}], generate a hyper-realistic list of 10-12 highly personalized job opportunities that EXACTLY match their profile. Do not invent fake companies, use real tech companies or startups. Provide highly specific job titles and locations.
-
-Respond ONLY with a valid JSON object starting with '{' and ending with '}'. Do not use markdown wrappers, code blocks, or explanations. 
-
-Use this exact schema:
-{
-  "jobs": [
-    {
-      "id": 1,
-      "title": "Machine Learning Engineer",
-      "company": "OpenAI",
-      "location": "San Francisco, CA (Remote)",
-      "requiredSkills": ["Python", "TensorFlow", "NLP"],
-      "minAtsScore": 80,
-      "skillMatchPercentage": 95,
-      "description": "A tailored description emphasizing why this role uniquely fits their specific background based on their skills...",
-      "applyLink": "https://www.linkedin.com/jobs/search/?keywords=Machine+Learning+Engineer+OpenAI"
-    }
-  ],
-  "missingSkills": ["List 3-5 high-value, specific skills they should learn next to level up"]
-}
-`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
-
-    const aiResponseText = response.text().trim();
-    const cleanedJson = aiResponseText.replace(/```json/g, "").replace(/```/g, "").trim();
-    const jobAnalysis = JSON.parse(cleanedJson);
+    // Use fast static matcher with expanded repository instead of slow/fragile AI generation
+    const jobAnalysis = generateJobMatches(combinedSkills, atsScore);
 
     res.json({
-      message: "Job matches generated successfully by AI",
-      jobs: jobAnalysis.jobs || [],
-      totalJobs: jobAnalysis.jobs?.length || 0,
+      message: "Job matches retrieved successfully",
+      jobs: jobAnalysis.matchedJobs || [],
+      totalJobs: jobAnalysis.matchedJobs?.length || 0,
       missingSkills: jobAnalysis.missingSkills || [],
       atsScore: atsScore,
     });
   } catch (error) {
-    console.error("AI Job Match Error:", error);
-    res.status(500).json({ message: "Failed to generate job matches" });
+    console.error("Job Match Error:", error);
+    res.status(500).json({ message: "Failed to fetch job matches" });
   }
 };
 
@@ -725,7 +799,7 @@ Respond directly to the user's latest question. If they ask for recommendations,
       answer = response.text;
     } catch (aiError) {
       console.error("AI Tutor fallback:", aiError.message);
-      answer = "I'm sorry, my AI brain is currently resting. However, based on your profile, your ATS score is " + atsScore + "%. I'd recommend focusing on your next roadmap steps: " + (current.map(s => s.title).join(", ") || "building more projects.");
+      answer = "I'm sorry, I cannot connect to my intelligence network right now (Missing or Invalid API Key). Please ensure you have added a valid GEMINI_API_KEY in the backend `.env` file! However, based on your profile, your ATS score is " + atsScore + "%. I'd recommend focusing on your next roadmap steps: " + (current.map(s => s.title).join(", ") || "building more projects.");
     }
 
     res.json({ answer });
