@@ -93,7 +93,9 @@ export default function Pricing() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || `Server error: ${response.status}`);
+        // Show the actual Stripe error detail for diagnosis
+        const detail = data.error ? `${data.message}: ${data.error}` : (data.message || `Server error: ${response.status}`);
+        throw new Error(detail);
       }
 
       if (data.sessionUrl) {

@@ -68,10 +68,13 @@ export const createCheckoutSession = async (req, res) => {
 
     const planData = PLANS[plan];
 
+    // Only pass customer_email if it looks valid — Stripe rejects malformed emails
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email);
+
     // Create Stripe checkout session
     const session = await getStripe().checkout.sessions.create({
       payment_method_types: ["card"],
-      customer_email: user.email,
+      ...(isValidEmail && { customer_email: user.email }),
       client_reference_id: user._id.toString(),
       line_items: [
         {
@@ -87,8 +90,8 @@ export const createCheckoutSession = async (req, res) => {
         },
       ],
       mode: "payment",
-      success_url: `${process.env.FRONTEND_URL || "http://localhost:5173"}/payment-success?session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
-      cancel_url: `${process.env.FRONTEND_URL || "http://localhost:5173"}/payment-cancelled`,
+      success_url: `${process.env.FRONTEND_URL || "http://localhost:5177"}/payment-success?session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
+      cancel_url: `${process.env.FRONTEND_URL || "http://localhost:5177"}/payment-cancelled`,
       metadata: {
         userId: user._id.toString(),
         plan: plan,

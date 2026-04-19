@@ -30,7 +30,12 @@ async function runTest() {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   const prompt = `
 You are an expert ATS (Applicant Tracking System) analyzer. Analyze the following resume text and provide:
-1. An ATS Score (0-100) based on industry standards, skill relevance, and impact.
+1. An ATS Score (0-100). Use the following strict rubric for consistency:
+   - 0-30: Incomplete, missing essential sections (contact/experience), or severe formatting issues.
+   - 31-50: Basic resume, some skills/experience but lacks impact scores, quantifiable metrics, or professional layout.
+   - 51-70: Professional resume with clear sections and relevant skills, but could use more achievement-based descriptions and specific metrics.
+   - 71-90: High-quality resume with strong technical skills, quantifiable achievements (e.g., "increased X by 20%"), and clear role progression.
+   - 91-100: Exceptional resume, perfect alignment with top-tier industry standards, significant leadership evidence, and clear, measurable impact across all roles.
 2. A list of technical and soft skills found in the resume.
 3. Total calculated years or months of experience (e.g., "3 years 2 months (including internship)").
 4. 3-5 specific, actionable suggestions for improving the resume.
@@ -52,7 +57,7 @@ ${testResume}
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
-          temperature: 0.2,
+          temperature: 0.0,
           responseMimeType: "application/json",
       }
     });
